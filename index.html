@@ -93,10 +93,19 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 @media(max-width:400px){.theme-name{display:none}}
 .theme-btn{
   width:26px;height:26px;border-radius:50%;border:2px solid var(--line);
-  padding:0;position:relative;transition:.15s;
+  padding:0;position:relative;overflow:hidden;transition:.15s;
 }
 .theme-btn:hover{transform:scale(1.12)}
 .theme-btn[aria-pressed="true"]{border-color:var(--text);box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--accent)}
+.theme-btn.shimmer::after{
+  content:"";position:absolute;inset:-60%;
+  background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.9) 50%,transparent 65%);
+  animation:themeShimmer 1.1s ease;
+}
+@keyframes themeShimmer{
+  from{transform:translateX(-140%) rotate(6deg);}
+  to{transform:translateX(140%) rotate(6deg);}
+}
 
 /* ==========================================================================
    4. HERO BAND
@@ -213,6 +222,28 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 
 /* Number-plate KPI tiles — the plate is BMX's own artifact, so the stat cards
    borrow its proportions: heavy border, condensed numeral, small caption. */
+.ov-top{display:flex;gap:18px;align-items:stretch;margin-bottom:26px}
+.mini-map{
+  flex:0 0 33%;min-width:200px;max-width:300px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:8px;position:relative;overflow:hidden;transition:border-color .15s;
+}
+.mini-map:hover{border-color:var(--accent)}
+.mini-map:hover .mini-map-cta{opacity:1;transform:translateY(0)}
+.mini-map svg{width:100%;height:auto;display:block}
+.mini-map-cta{
+  position:absolute;left:8px;right:8px;bottom:8px;
+  background:var(--accent);color:var(--plate-ink);
+  font-family:var(--font-display);font-size:12px;letter-spacing:.05em;text-transform:uppercase;
+  padding:7px 0;border-radius:2px;text-align:center;font-weight:700;
+  opacity:0;transform:translateY(4px);transition:.15s;
+}
+.ov-top .plates{flex:1;margin-bottom:0}
+@media(max-width:720px){
+  .ov-top{flex-direction:column}
+  .mini-map{max-width:none;flex:none}
+  .mini-map-cta{opacity:1;transform:none}   /* always visible once touch is the norm */
+}
 .plates{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin:0 0 26px}
 .plate{
   background:var(--plate-bg);color:var(--plate-ink);border:3px solid var(--plate-ink);
@@ -253,6 +284,14 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 /* ==========================================================================
    7. MAP
    ========================================================================== */
+.zoom-bar{display:flex;gap:6px;margin:0 0 14px}
+.zoom-btn{
+  background:var(--surface);border:1px solid var(--line);color:var(--text-dim);
+  padding:7px 14px;border-radius:var(--radius);font-size:12.5px;
+  font-family:var(--font-display);letter-spacing:.05em;text-transform:uppercase;
+}
+.zoom-btn:hover{color:var(--text);border-color:var(--accent-3)}
+.zoom-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--plate-ink);font-weight:700}
 .map-shell{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:8px}
 #mapSvg{width:100%;height:auto;display:block;touch-action:manipulation}
 .state-land{fill:var(--land);stroke:var(--land-line);stroke-width:1.1;stroke-linejoin:round}
@@ -349,8 +388,11 @@ tbody tr:last-child td{border-bottom:0}
 
 <header class="top">
   <div class="top-in">
-    <!-- HOMEPAGE LINK — edit CONFIG.site.homeUrl to change -->
-    <a class="home-link" id="homeLink" href="#">← PMR</a>
+    <!-- HOMEPAGE LINK — edit CONFIG.site.homeUrl to change.
+         target="_top" is required: this page is embedded in an iframe on
+         postmillenniumrenaissance.com/bmx/, so a plain link only navigates
+         the iframe and the visible address bar never changes. -->
+    <a class="home-link" id="homeLink" href="#" target="_top">← PMR</a>
     <div class="top-title">BMX Tracks in California<small id="topSub">Loading…</small></div>
     <div class="theme-switch" id="themeSwitch" role="group" aria-label="Color scheme"></div>
   </div>
@@ -450,13 +492,13 @@ const THEMES = {
   powerlite:{
     label:"Powerlite", swatch:"#ffd23f",
     vars:{
-      "--bg":"#141619","--bg-alt":"#1a1d22","--surface":"#20242b","--surface-2":"#272c34",
-      "--line":"#333a44","--line-soft":"#2a2f37",
+      "--bg":"#222427","--bg-alt":"#282b30","--surface":"#2e3239","--surface-2":"#353a42",
+      "--line":"#414852","--line-soft":"#383d45",
       "--text":"#f2f1ec","--text-dim":"#9aa3af","--text-faint":"#6b7280",
       "--accent":"#ffd23f","--accent-2":"#e5484d","--accent-3":"#4cc2ff","--hero-accent":"#ffd23f",
       "--ok":"#5ec26a","--warn":"#f0a33a","--bad":"#e5484d","--ghost":"#7c8794",
       "--plate-bg":"#f2f1ec","--plate-ink":"#141619",
-      "--grid":"rgba(255,255,255,.07)","--land":"#242931","--land-line":"#4a5361"
+      "--grid":"rgba(255,255,255,.07)","--land":"#32373f","--land-line":"#58616f"
     }
   },
   robinson:{
@@ -1114,7 +1156,7 @@ function buildThemeSwitch(){
 /* ==========================================================================
    STATE
    ========================================================================== */
-const state = { activeTab:"overview", q:"", region:"all", status:"all", conf:"all", flag:"all", sort:{key:"n",dir:1} };
+const state = { activeTab:"overview", q:"", region:"all", status:"all", conf:"all", flag:"all", zoom:"full", sort:{key:"n",dir:1} };
 
 function filteredTracks(){
   const q = state.q.trim().toLowerCase();
@@ -1153,6 +1195,26 @@ const TABS = [
 ];
 
 /* ---------- TAB 1: OVERVIEW ---------- */
+/* Compact, non-interactive rendering of the same outline + markers used on
+   the full Map tab. Deliberately reuses `project`, `MAPS`, `markerPath` and
+   `statusColor` rather than duplicating geometry, so the two maps can never
+   drift out of sync. */
+function buildMiniMapSvg(W,H){
+  const map=MAPS.California, pad=10, view={bounds:map.bounds};
+  const path = map.outline.map((p,i)=>{
+    const [x,y]=project(p[0],p[1],view,W,H,pad);
+    return (i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1);
+  }).join(" ")+" Z";
+  const order = t => isClosed(t) ? 0 : 1;
+  const dots = DATA.tracks.slice().sort((a,b)=>order(a)-order(b)).map(t=>{
+    const [x,y]=project(t.lat,t.lon,view,W,H,pad);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="${statusColor(t.s)}" opacity="${confAlpha(t)*0.9}"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-hidden="true" focusable="false">
+    <path class="state-land" d="${path}"/>${dots}
+  </svg>`;
+}
+
 function renderOverview(){
   const all = DATA.tracks;
   const racing = all.filter(isRacing);
@@ -1200,7 +1262,13 @@ function renderOverview(){
       <b>${esc(v.label)}</b><span>${esc(STATUS_HELP[k])}</span></div>`).join("");
 
   return `
-  <div class="plates">${plates}</div>
+  <div class="ov-top">
+    <button class="mini-map" id="miniMapBtn" aria-label="Open the full interactive map">
+      ${buildMiniMapSvg(300,340)}
+      <span class="mini-map-cta">View full map →</span>
+    </button>
+    <div class="plates">${plates}</div>
+  </div>
 
   <div class="sec">
     <div class="sec-head"><h2>What the four statuses mean</h2><span class="rule"></span></div>
@@ -1251,6 +1319,15 @@ function renderOverview(){
 }
 
 /* ---------- TAB 2: MAP ---------- */
+/* ZOOM PRESETS — the two most crowded regions get a dedicated close-up.
+   `bounds:null` means "use the full state." Add more the same way: any
+   lat/lon box works, no new projection logic needed. */
+const ZOOMS = {
+  full:{label:"Full State", bounds:null},
+  bay: {label:"Bay Area",   bounds:{latMin:36.9, latMax:38.9, lonMin:-123.3, lonMax:-121.0}},
+  la:  {label:"LA Basin",   bounds:{latMin:33.35,latMax:34.95,lonMin:-119.1, lonMax:-117.0}}
+};
+
 function project(lat,lon,map,W,H,pad){
   const b=map.bounds;
   const k=Math.cos(((b.latMin+b.latMax)/2)*Math.PI/180);
@@ -1261,22 +1338,33 @@ function project(lat,lon,map,W,H,pad){
 }
 
 function renderMap(){
-  const map=MAPS.California, W=CONFIG.map.width, H=CONFIG.map.height, pad=CONFIG.map.padding;
-  const path = map.outline.map((p,i)=>{
-    const [x,y]=project(p[0],p[1],map,W,H,pad);
+  const baseMap=MAPS.California, W=CONFIG.map.width, H=CONFIG.map.height, pad=CONFIG.map.padding;
+  const zoomKey = ZOOMS[state.zoom] ? state.zoom : "full";
+  const zoomBounds = ZOOMS[zoomKey].bounds || baseMap.bounds;
+  const view = {bounds:zoomBounds};                 // what project() actually reads
+  const margin = 0.08;                               // deg of lat/lon slack at the edge
+
+  const path = baseMap.outline.map((p,i)=>{
+    const [x,y]=project(p[0],p[1],view,W,H,pad);
     return (i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1);
   }).join(" ")+" Z";
 
-  const cities = map.cities.map(c=>{
-    const [x,y]=project(c.lat,c.lon,map,W,H,pad);
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.8" fill="var(--text-faint)" opacity=".7"/>
-            <text x="${(x+6).toFixed(1)}" y="${(y+3.5).toFixed(1)}" font-size="10" font-family="var(--font-mono)" fill="var(--text-faint)" opacity=".85">${esc(c.name)}</text>`;
-  }).join("");
+  const cities = baseMap.cities
+    .filter(c=> c.lat>=zoomBounds.latMin-margin && c.lat<=zoomBounds.latMax+margin &&
+                c.lon>=zoomBounds.lonMin-margin && c.lon<=zoomBounds.lonMax+margin)
+    .map(c=>{
+      const [x,y]=project(c.lat,c.lon,view,W,H,pad);
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.8" fill="var(--text-faint)" opacity=".7"/>
+              <text x="${(x+6).toFixed(1)}" y="${(y+3.5).toFixed(1)}" font-size="10" font-family="var(--font-mono)" fill="var(--text-faint)" opacity=".85">${esc(c.name)}</text>`;
+    }).join("");
 
-  // Draw closed first so active markers sit on top
+  // Only draw tracks inside the current view — trimming these (rather than
+  // relying on SVG clipping alone) keeps hover targets and the DOM light.
+  const inView = t => t.lat>=zoomBounds.latMin-margin && t.lat<=zoomBounds.latMax+margin &&
+                       t.lon>=zoomBounds.lonMin-margin && t.lon<=zoomBounds.lonMax+margin;
   const order = t => isClosed(t) ? 0 : 1;
-  const markers = DATA.tracks.slice().sort((a,b)=>order(a)-order(b)).map(t=>{
-    const [x,y]=project(t.lat,t.lon,map,W,H,pad);
+  const markers = DATA.tracks.filter(inView).slice().sort((a,b)=>order(a)-order(b)).map(t=>{
+    const [x,y]=project(t.lat,t.lon,view,W,H,pad);
     const st=STATUS[t.s], fx=+x.toFixed(1), fy=+y.toFixed(1);
     const deco = flagsOf(t).map(f=>flagPath(f,fx,fy)).join("");
     return `<g class="mk" data-i="${DATA.tracks.indexOf(t)}" tabindex="0" role="button"
@@ -1286,6 +1374,9 @@ function renderMap(){
        ${deco}${markerPath(st.shape,fx,fy,statusColor(t.s))}
      </g>`;
   }).join("");
+
+  const zoomBar = Object.entries(ZOOMS).map(([k,z])=>
+    `<button class="zoom-btn" data-zoom="${k}" aria-pressed="${k===zoomKey}">${esc(z.label)}</button>`).join("");
 
   const legend = Object.entries(STATUS).map(([k,v])=>{
     const sw = `<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">${markerPath(v.shape,11,11,v.color)}</svg>`;
@@ -1304,11 +1395,13 @@ function renderMap(){
     confidence tier. Hover or tap for detail. Coordinates are city-level approximations for placement, not
     navigation. The filters here drive the Directory tab too.</p>
 
+  <div class="zoom-bar" role="group" aria-label="Zoom to a region">${zoomBar}</div>
+
   ${controlsHTML()}
   <p class="result-count" id="mapCount"></p>
 
   <div class="map-shell">
-    <svg id="mapSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of BMX tracks in California">
+    <svg id="mapSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of BMX tracks in California, ${esc(ZOOMS[zoomKey].label)} view">
       <path class="state-land" d="${path}"/>
       ${cities}
       ${markers}
@@ -1603,10 +1696,18 @@ function buildTabs(){
   $("#tabBar").innerHTML = TABS.map((t,i)=>
     `<button class="tab" role="tab" id="tab-${t.id}" data-tab="${t.id}" aria-selected="false" aria-controls="panels">
       <span class="tab-n">${String(i+1).padStart(2,"0")}</span>${esc(t.label)}</button>`).join("");
-  $$(".tab").forEach(b=> b.addEventListener("click",()=>{
-    renderTab(b.dataset.tab);
-    if(history.replaceState) history.replaceState(null,"","#"+b.dataset.tab);
-  }));
+  $$(".tab").forEach(b=> b.addEventListener("click",()=> goToTab(b.dataset.tab)));
+}
+
+/* Single entry point for switching tabs, used by the tab bar itself and by
+   any in-page link that should jump to a tab (e.g. the Overview mini-map). */
+function goToTab(id, opts){
+  renderTab(id);
+  if(history.replaceState) history.replaceState(null,"","#"+id);
+  if(opts && opts.scrollToTabs){
+    const bar = document.querySelector(".tabs");
+    if(bar) bar.scrollIntoView({behavior:"smooth", block:"start"});
+  }
 }
 
 function renderTab(id){
@@ -1617,7 +1718,13 @@ function renderTab(id){
   wireControls();
   if(tab.id==="map") wireMap();
   if(tab.id==="directory") wireTable();
+  if(tab.id==="overview") wireOverview();
   updateCounts();
+}
+
+function wireOverview(){
+  const b=$("#miniMapBtn");
+  if(b) b.addEventListener("click",()=> goToTab("map",{scrollToTabs:true}));
 }
 
 function wireControls(){
@@ -1660,6 +1767,10 @@ function wireTable(){
 }
 
 function wireMap(){
+  $$(".zoom-btn").forEach(b=> b.addEventListener("click",()=>{
+    state.zoom = b.dataset.zoom;
+    renderTab("map");
+  }));
   const tip=$("#mapTip"), shell=$(".map-shell");
   const show=(g,evt)=>{
     const t=DATA.tracks[+g.dataset.i], st=STATUS[t.s];
@@ -1706,6 +1817,21 @@ function buildOrigin(){
   });
 }
 
+/* Every 7s, give a random theme button a brief shimmer — a small "these are
+   clickable" cue. Respects prefers-reduced-motion via the global CSS rule,
+   which strips the animation entirely; the class still toggles harmlessly. */
+function scheduleThemeShimmer(){
+  setInterval(()=>{
+    const btns = $$(".theme-btn");
+    if(!btns.length) return;
+    const b = btns[Math.floor(Math.random()*btns.length)];
+    b.classList.remove("shimmer");
+    void b.offsetWidth; // restart the animation if it's already mid-run
+    b.classList.add("shimmer");
+    setTimeout(()=> b.classList.remove("shimmer"), 1200);
+  }, 7000);
+}
+
 /* ==========================================================================
    HERO ARTWORK
    Pushes CONFIG.hero onto the band as CSS variables. If `image` is empty the
@@ -1740,10 +1866,11 @@ function boot(){
   $("#footText").innerHTML =
     `<strong>${esc(CONFIG.site.tool)}</strong> · ${esc(CONFIG.site.name)} · compiled ${esc(CONFIG.site.compiled)}. ` +
     `Single-file HTML, no external dependencies. Records carry individual confidence tiers — check the ` +
-    `Method &amp; Sources tab before citing. <a href="${CONFIG.site.homeUrl}">Back to ${esc(CONFIG.site.name)}</a>`;
+    `Method &amp; Sources tab before citing. <a href="${CONFIG.site.homeUrl}" target="_top">Back to ${esc(CONFIG.site.name)}</a>`;
 
   applyHeroArt();
   buildThemeSwitch();
+  scheduleThemeShimmer();
   buildOrigin();
   buildTabs();
   const hash=(location.hash||"").replace("#","");
