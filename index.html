@@ -1215,6 +1215,27 @@ function buildMiniMapSvg(W,H){
   </svg>`;
 }
 
+/* --- A second collapsed story card, shown under "The arc" on Overview.
+   Same shape as DATA.birthplace, rendered by the generic renderCollapseCard()
+   helper — add more of these the same way if you want a third someday. --- */
+DATA.silverDollar = {
+  year:"2021",
+  title:"Silver Dollar BMX — still rebuilding",
+  tease:"Chico lost a 30-year lease when the city reclaimed the land. Tap to read where it stands.",
+  facts:[
+    ["Founded","2000, as a nonprofit"],
+    ["Original site lost","2021"],
+    ["Reason","City reclaimed the land for homeless housing"],
+    ["New site","Under construction since 2023, near Chico Municipal Airport"],
+    ["Racing resumed","Not yet, as of late 2025"]
+  ],
+  paragraphs:[
+    "Silver Dollar BMX ran for two decades on a 30-year, no-cost lease beside the Silver Dollar Fairgrounds in Chico, incorporated as a nonprofit in <strong>2000</strong>.",
+    "In <strong>2021</strong>, the City of Chico reclaimed the site for emergency homeless housing, following the outcome of <em>Warren v. City of Chico</em>. The track closed that November, with no fallback site lined up.",
+    "Volunteers have since been rebuilding at a new location near the Chico Municipal Airport, under construction since 2023. As of late 2025, the new track was <strong>still not racing</strong> — a well-known California BMX track effectively erased from the calendar for years by a single land-use decision, not by a lack of riders."
+  ]
+};
+
 function renderOverview(){
   const all = DATA.tracks;
   const racing = all.filter(isRacing);
@@ -1315,6 +1336,7 @@ function renderOverview(){
     <p class="sec-note">Estimated number of BMX tracks operating in California. The band is the plausible
       range; the ringed point at 2010 is the one directly counted year. See the Growth tab for methodology.</p>
     <div class="chart-card">${spark}</div>
+    <div style="margin-top:14px">${renderCollapseCard("silverDollar", DATA.silverDollar)}</div>
   </div>`;
 }
 
@@ -1722,9 +1744,45 @@ function renderTab(id){
   updateCounts();
 }
 
+/* Generic collapsed-by-default story card — same visual pattern as the
+   Palms Park card in the hero. Pass any DATA.* object shaped like
+   {year, title, tease, facts, paragraphs}. `id` must be unique per card. */
+function renderCollapseCard(id, data){
+  const facts = data.facts
+    ? `<div class="origin-facts">${data.facts.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</div>`
+    : "";
+  return `
+  <div class="origin" id="${id}Card" data-open="false">
+    <button class="origin-btn" id="${id}Btn" aria-expanded="false" aria-controls="${id}Body">
+      <span class="origin-yr">${esc(data.year)}</span>
+      <span class="origin-lab">
+        <b>${esc(data.title)}</b>
+        <span>${esc(data.tease)}</span>
+      </span>
+      <span class="origin-chev">▶</span>
+    </button>
+    <div class="origin-body hidden" id="${id}Body">
+      ${data.paragraphs.map(p=>`<p>${p}</p>`).join("")}
+      ${facts}
+    </div>
+  </div>`;
+}
+
+function wireCollapseCard(id){
+  const card=$("#"+id+"Card"), btn=$("#"+id+"Btn"), body=$("#"+id+"Body");
+  if(!card||!btn||!body) return;
+  btn.addEventListener("click",()=>{
+    const open = card.dataset.open === "true";
+    card.dataset.open = String(!open);
+    btn.setAttribute("aria-expanded", String(!open));
+    body.classList.toggle("hidden", open);
+  });
+}
+
 function wireOverview(){
   const b=$("#miniMapBtn");
   if(b) b.addEventListener("click",()=> goToTab("map",{scrollToTabs:true}));
+  wireCollapseCard("silverDollar");
 }
 
 function wireControls(){
