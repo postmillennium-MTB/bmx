@@ -7,9 +7,35 @@
 <meta name="description" content="An interactive atlas of 127 BMX race tracks in California — active, unconfirmed and closed — from the 1969 birthplace of the sport to today.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%23141619'/><text y='72' x='50' text-anchor='middle' font-size='58' font-family='Arial Narrow,Arial' font-weight='bold' fill='%23ffd23f'>B</text></svg>">
 
+<!-- ==========================================================================
+     BMX TRACKS IN CALIFORNIA — Post Millennium Renaissance
+     Single-file HTML. Zero external dependencies. No CDN, no build step.
+
+     ARCHITECTURE / HOW TO EXTEND  (read this first)
+     --------------------------------------------------------------------------
+     Everything you would normally want to change lives in the CONFIG and DATA
+     blocks near the top of the script block below. You should not need to
+     touch the rendering code to add content.
+
+       ADD A TRACK ............ push an object into DATA.tracks
+       ADD A STATE ............ add an outline to MAPS + tracks with that state
+       ADD A COUNTY/REGION .... add a key to DATA.regions, use it on a track
+       ADD A COLOR SCHEME ..... add an object to THEMES
+       ADD A TAB .............. add an entry to TABS with a render function
+       ADD A CHART ............ call Chart.xy / Chart.bars / Chart.gantt
+       EDIT GROWTH ESTIMATES .. DATA.growth
+       EDIT TRENDS DATA ....... DATA.trends
+       EDIT LEAGUES ........... DATA.leagues
+
+     CONFIDENCE TIERS are attached to individual records, not to the page.
+     Anything labelled "estimated" or "draft" should not be cited as fact.
+     ========================================================================== -->
+
 <style>
 /* ==========================================================================
    1. THEME TOKENS
+   Each theme in the THEMES object writes these custom properties onto <html>.
+   To add a scheme, add an object to THEMES — no CSS changes required.
    ========================================================================== */
 :root{
   --bg:#141619; --bg-alt:#1a1d22; --surface:#20242b; --surface-2:#272c34;
@@ -47,7 +73,7 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 .hidden{display:none !important}
 
 /* ==========================================================================
-   3. HEADER & HERO
+   3. HEADER
    ========================================================================== */
 .top{border-bottom:1px solid var(--line);background:var(--bg-alt);position:sticky;top:0;z-index:60}
 .top-in{display:flex;align-items:center;gap:16px;padding:10px 18px;max-width:1180px;margin:0 auto;flex-wrap:wrap}
@@ -72,15 +98,53 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 .theme-btn:hover{transform:scale(1.12)}
 .theme-btn[aria-pressed="true"]{border-color:var(--text);box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--accent)}
 
-.hero{padding:34px 0 20px;border-bottom:1px solid var(--line-soft)}
+/* ==========================================================================
+   4. HERO BAND
+   Full-bleed panel behind the page title, optionally carrying a repeating
+   tile set from CONFIG.hero. The artwork is dark in every theme, so this
+   band forces a light-on-dark palette locally, whatever scheme is active.
+   If the image file is missing the band falls back to a plain dark panel,
+   so the page never looks broken.
+   ========================================================================== */
+.hero-band{
+  position:relative;
+  border-bottom:1px solid var(--line);
+  background-color:#232329;                    /* shows through if no tile */
+  background-image:var(--hero-art,none);
+  /* repeat-x only: the artwork tiles cleanly left-to-right but its top and
+     bottom edges do not match, so a full `repeat` would show a seam. One
+     vertical repeat, centered, avoids it entirely. */
+  background-repeat:repeat-x;
+  background-size:var(--hero-tile,420px) auto;
+  background-position:center center;
+  /* Local palette override — light type regardless of the active theme */
+  --text:#f7f5f0;
+  --text-dim:#d3cdc4;
+  --text-faint:#a7a099;
+}
+.hero-band::after{                             /* legibility scrim */
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:rgba(17,17,21,var(--hero-scrim,.78));
+}
+.hero-inner{position:relative;z-index:1;padding:42px 0 36px}
+.hero-inner .eyebrow{color:var(--hero-accent,var(--accent))}
+.hero-inner h1{
+  font-size:clamp(38px,8vw,74px);text-transform:uppercase;letter-spacing:-.005em;
+  color:var(--text);text-shadow:0 2px 14px rgba(0,0,0,.6);
+}
+.hero-inner h1 em{font-style:normal;color:var(--hero-accent,var(--accent))}
+.hero-inner p{
+  max-width:62ch;color:var(--text-dim);margin:14px 0 0;font-size:15.5px;
+  text-shadow:0 1px 10px rgba(0,0,0,.7);
+}
 .eyebrow{
   font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
   color:var(--accent);margin-bottom:10px;
 }
-.hero h1{font-size:clamp(38px,8vw,74px);text-transform:uppercase;letter-spacing:-.005em}
-.hero h1 em{font-style:normal;color:var(--accent)}
-.hero p{max-width:62ch;color:var(--text-dim);margin:14px 0 0;font-size:15.5px}
+/* Band below the artwork, holding the origin card */
+.hero{padding:22px 0 2px}
 
+/* ---- The birthplace card: collapsed by default ---- */
 .origin{
   margin:22px 0 0;border:1px solid var(--line);border-left:4px solid var(--accent);
   background:var(--surface);border-radius:var(--radius);overflow:hidden;
@@ -117,7 +181,7 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 .origin-facts dd{margin:3px 0 0;font-size:13.5px;font-weight:600}
 
 /* ==========================================================================
-   4. TABS
+   5. TABS
    ========================================================================== */
 .tabs{
   position:sticky;top:47px;z-index:50;background:var(--bg);
@@ -138,7 +202,7 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
 
 /* ==========================================================================
-   5. GENERIC BLOCKS
+   6. GENERIC BLOCKS
    ========================================================================== */
 .sec{margin:0 0 34px}
 .sec-head{display:flex;align-items:baseline;gap:12px;margin:0 0 4px;flex-wrap:wrap}
@@ -147,6 +211,8 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 .sec-note{color:var(--text-dim);font-size:13.5px;margin:0 0 16px;max-width:74ch}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
 
+/* Number-plate KPI tiles — the plate is BMX's own artifact, so the stat cards
+   borrow its proportions: heavy border, condensed numeral, small caption. */
 .plates{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin:0 0 26px}
 .plate{
   background:var(--plate-bg);color:var(--plate-ink);border:3px solid var(--plate-ink);
@@ -168,6 +234,7 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 .chart-card .sub{font-size:12px;color:var(--text-faint);margin-bottom:12px}
 .chart-card svg{width:100%;height:auto;display:block;overflow:visible}
 
+/* Confidence chips */
 .chip{
   display:inline-block;font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;
   text-transform:uppercase;padding:2px 6px;border-radius:2px;border:1px solid;white-space:nowrap;
@@ -184,12 +251,11 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
 
 /* ==========================================================================
-   6. MAP
+   7. MAP
    ========================================================================== */
-.map-shell{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:8px; overflow:hidden;}
-#mapSvg{width:100%;height:auto;display:block;cursor:grab;touch-action:none;}
-#mapSvg:active{cursor:grabbing;}
-.state-land{fill:var(--land);stroke:var(--land-line);stroke-width:1.1;stroke-linejoin:round; transition: stroke-width 0.2s;}
+.map-shell{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:8px}
+#mapSvg{width:100%;height:auto;display:block;touch-action:manipulation}
+.state-land{fill:var(--land);stroke:var(--land-line);stroke-width:1.1;stroke-linejoin:round}
 .mk{cursor:pointer;transition:opacity .15s}
 .mk:hover .mk-hit{opacity:.16}
 .mk.dim{opacity:.12;pointer-events:none}
@@ -201,18 +267,6 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 }
 .map-tip b{display:block;font-family:var(--font-display);font-size:14px;letter-spacing:.03em}
 .map-tip i{font-style:normal;color:var(--text-dim);display:block;font-size:11.5px;margin-top:2px}
-
-/* Map Controls */
-.map-controls{
-  position:absolute; bottom:16px; right:16px; display:flex; flex-direction:column; gap:6px; z-index:10;
-}
-.map-ctrl-btn{
-  width:32px; height:32px; background:var(--surface-2); border:1px solid var(--line); 
-  border-radius:var(--radius); color:var(--text); font-size:16px; display:flex; align-items:center; justify-content:center;
-  box-shadow:var(--shadow); transition: background 0.15s, border-color 0.15s;
-}
-.map-ctrl-btn:hover{background:var(--bg-alt); border-color:var(--accent);}
-
 .map-legend{
   display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;padding:12px 14px;
   background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);font-size:12.5px;
@@ -220,7 +274,7 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 .map-legend span{display:flex;align-items:center;gap:7px;color:var(--text-dim)}
 
 /* ==========================================================================
-   7. CONTROLS / DIRECTORY
+   8. CONTROLS / DIRECTORY
    ========================================================================== */
 .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 16px}
 .search-wrap{position:relative;flex:1;min-width:220px}
@@ -243,7 +297,7 @@ select{width:auto;min-width:150px;cursor:pointer}
 .result-count{font-family:var(--font-mono);font-size:12px;color:var(--text-faint);margin:0 0 10px}
 
 .tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
-table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:920px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:820px}
 thead th{
   position:sticky;top:0;background:var(--surface-2);text-align:left;padding:10px 12px;
   font-family:var(--font-display);font-size:12px;letter-spacing:.09em;text-transform:uppercase;
@@ -262,16 +316,8 @@ tbody tr:last-child td{border-bottom:0}
 .empty{padding:44px 20px;text-align:center;color:var(--text-dim)}
 .empty b{display:block;font-family:var(--font-display);font-size:19px;text-transform:uppercase;margin-bottom:6px;color:var(--text)}
 
-/* Actions Column */
-.btn-locate{
-  background:var(--line); border:none; color:var(--text); padding:4px 8px; border-radius:var(--radius);
-  font-size:11px; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.05em; transition:0.15s;
-}
-.btn-locate:hover{background:var(--accent); color:var(--plate-ink);}
-
-
 /* ==========================================================================
-   8. TIMELINE / MISC
+   9. TIMELINE / MISC
    ========================================================================== */
 .statdefs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;background:var(--line-soft);border:1px solid var(--line-soft)}
 .statdef{background:var(--surface);padding:11px 14px}
@@ -292,7 +338,7 @@ tbody tr:last-child td{border-bottom:0}
 .foot a{color:var(--text-dim)}
 
 @media(max-width:640px){
-  .hero{padding:24px 0 16px}
+  .hero-inner{padding:28px 0 24px}
   .plate b{font-size:34px}
   .tabs{top:82px}
   .top-in{padding:8px 14px}
@@ -303,6 +349,7 @@ tbody tr:last-child td{border-bottom:0}
 
 <header class="top">
   <div class="top-in">
+    <!-- HOMEPAGE LINK — edit CONFIG.site.homeUrl to change -->
     <a class="home-link" id="homeLink" href="#">← PMR</a>
     <div class="top-title">BMX Tracks in California<small id="topSub">Loading…</small></div>
     <div class="theme-switch" id="themeSwitch" role="group" aria-label="Color scheme"></div>
@@ -310,12 +357,20 @@ tbody tr:last-child td{border-bottom:0}
 </header>
 
 <main>
+  <!-- Full-bleed artwork band. The tile comes from CONFIG.hero. -->
+  <section class="hero-band" id="heroBand">
+    <div class="wrap">
+      <div class="hero-inner">
+        <div class="eyebrow">Post Millennium Renaissance · Track Atlas</div>
+        <h1>BMX Tracks in <em>California</em></h1>
+        <p id="heroSub"></p>
+      </div>
+    </div>
+  </section>
+
   <div class="wrap">
     <section class="hero">
-      <div class="eyebrow">Post Millennium Renaissance · Track Atlas</div>
-      <h1>BMX Tracks in <em>California</em></h1>
-      <p id="heroSub"></p>
-
+      <!-- ORIGIN CARD — collapsed by default, expands to the 1969 story -->
       <div class="origin" id="originCard" data-open="false">
         <button class="origin-btn" id="originBtn" aria-expanded="false" aria-controls="originBody">
           <span class="origin-yr" id="originYear">1969</span>
@@ -342,18 +397,55 @@ tbody tr:last-child td{border-bottom:0}
 
 <script>
 "use strict";
-
+/* ==========================================================================
+   CONFIG — site-level settings
+   ========================================================================== */
 const CONFIG = {
   site:{
     name:"Post Millennium Renaissance",
     homeUrl:"https://postmillenniumrenaissance.com/",
     tool:"BMX Tracks in California",
     compiled:"August 2026",
-    storageKey:"pmr-bmx-ca-theme"      
+    storageKey:"pmr-bmx-ca-theme"      // localStorage key for theme memory
+  },
+  /* ------------------------------------------------------------------
+     HERO ARTWORK
+     A tile repeated behind the page title.
+     image     path relative to this HTML file. Drop the .jpg beside the
+               HTML in the repo. Set to "" to turn the artwork off — the
+               band then falls back to a plain dark panel.
+     tileWidth px width of one repeat. Because the tile only repeats
+               horizontally (see note below), this also sets how tall the
+               artwork renders: height = tileWidth x 1.07. Keep it larger
+               than the band is tall, or you'll see plain colour above and
+               below the artwork.
+     scrim     0 to 1. How much the tile is darkened so the title stays
+               readable. Raise it if the type fights the pattern.
+
+     NOTE ON TILING: this artwork is seamless left-to-right but its top and
+     bottom edges do not match, so the CSS repeats it on the x axis only.
+     If you later swap in a fully seamless tile, change background-repeat
+     in the .hero-band rule to `repeat`.
+     ------------------------------------------------------------------ */
+  hero:{
+    image:"moose-pattern-tile.jpg",
+    tileWidth:420,
+    scrim:0.78
   },
   map:{ padding:26, width:720, height:840 }
 };
 
+/* ==========================================================================
+   THEMES — add an object here to add a color scheme. Nothing else to change.
+   `vars` maps 1:1 onto the CSS custom properties in :root.
+   Named for three California-era BMX frame brands. Chuck Robinson, who built
+   Robinson Racing frames, appears in this atlas's own origin story — he was
+   one of the three men watching the opening of "On Any Sunday" in 1971.
+   The palettes are evocative of each brand's era, not exact brand colors.
+   NOTE: --hero-accent is the accent used over the dark hero artwork. It is
+   usually the same as --accent, but a light theme needs a brighter value
+   there or the title will not read. Set it on any theme you add.
+   ========================================================================== */
 const THEMES = {
   powerlite:{
     label:"Powerlite", swatch:"#ffd23f",
@@ -361,7 +453,7 @@ const THEMES = {
       "--bg":"#141619","--bg-alt":"#1a1d22","--surface":"#20242b","--surface-2":"#272c34",
       "--line":"#333a44","--line-soft":"#2a2f37",
       "--text":"#f2f1ec","--text-dim":"#9aa3af","--text-faint":"#6b7280",
-      "--accent":"#ffd23f","--accent-2":"#e5484d","--accent-3":"#4cc2ff",
+      "--accent":"#ffd23f","--accent-2":"#e5484d","--accent-3":"#4cc2ff","--hero-accent":"#ffd23f",
       "--ok":"#5ec26a","--warn":"#f0a33a","--bad":"#e5484d","--ghost":"#7c8794",
       "--plate-bg":"#f2f1ec","--plate-ink":"#141619",
       "--grid":"rgba(255,255,255,.07)","--land":"#242931","--land-line":"#4a5361"
@@ -373,7 +465,7 @@ const THEMES = {
       "--bg":"#0b1a2a","--bg-alt":"#0f2237","--surface":"#12283f","--surface-2":"#17324c",
       "--line":"#25496b","--line-soft":"#1c3a58",
       "--text":"#e4eef8","--text-dim":"#93b4d0","--text-faint":"#6b8fae",
-      "--accent":"#7dd3fc","--accent-2":"#fbbf24","--accent-3":"#a5f3d0",
+      "--accent":"#7dd3fc","--accent-2":"#fbbf24","--accent-3":"#a5f3d0","--hero-accent":"#7dd3fc",
       "--ok":"#5eead4","--warn":"#fbbf24","--bad":"#fb7185","--ghost":"#6b8fae",
       "--plate-bg":"#e4eef8","--plate-ink":"#0b1a2a",
       "--grid":"rgba(125,211,252,.13)","--land":"#143050","--land-line":"#3f7fb5"
@@ -385,7 +477,7 @@ const THEMES = {
       "--bg":"#e8ddc8","--bg-alt":"#ddd0b6","--surface":"#f3ebda","--surface-2":"#e6dbc3",
       "--line":"#c3b193","--line-soft":"#d5c8ad",
       "--text":"#26201a","--text-dim":"#6b5c4a","--text-faint":"#8a7a64",
-      "--accent":"#9c3b1b","--accent-2":"#4a6b2f","--accent-3":"#2f5f7d",
+      "--accent":"#9c3b1b","--accent-2":"#4a6b2f","--accent-3":"#2f5f7d","--hero-accent":"#e8834a",
       "--ok":"#4a6b2f","--warn":"#b07d1a","--bad":"#9c3b1b","--ghost":"#8a7a64",
       "--plate-bg":"#26201a","--plate-ink":"#f3ebda",
       "--grid":"rgba(38,32,26,.10)","--land":"#dbcdb0","--land-line":"#8a7a64"
@@ -393,6 +485,20 @@ const THEMES = {
   }
 };
 
+/* ==========================================================================
+   STATUS MODEL
+   Four values on ONE question: can you go and ride here?
+   Nothing else belongs in this list. Things that are true *about* a track
+   but don't answer that question are FLAGS instead (see below).
+
+     active       confirmed racing on a current published schedule
+     unconfirmed  listed somewhere, but not confirmed racing now
+     building     exists as a project; not yet racing
+     closed       no longer operating
+
+   TO ADD A STATUS: only if it answers the same question differently.
+   If it doesn't, it is a flag, not a status.
+   ========================================================================== */
 const STATUS = {
   active:      {label:"Active",      color:"var(--ok)",      shape:"dot",    racing:true },
   unconfirmed: {label:"Unconfirmed", color:"var(--warn)",    shape:"hollow", racing:false},
@@ -400,11 +506,17 @@ const STATUS = {
   closed:      {label:"Closed",      color:"var(--bad)",     shape:"ring",   racing:false}
 };
 
+/* FLAGS — attributes a track can carry regardless of its status.
+   These render as badges in the table and as marker decoration on the map.
+   TO ADD A FLAG: add an entry here and set `flagkey:true` on any track. */
 const FLAGS = {
-  national:   {label:"National host", short:"NAT", note:"Hosts or has hosted a USA BMX national event."},
-  birthplace: {label:"Birthplace of BMX", short:"1969", note:"Where the sport started. Exactly one track carries this."}
+  national:   {label:"National host", short:"NAT",
+               note:"Hosts or has hosted a USA BMX national event."},
+  birthplace: {label:"Birthplace of BMX", short:"1969",
+               note:"Where the sport started. Exactly one track carries this."}
 };
 
+/* Plain-language gloss for each status, shown in the Overview key. */
 const STATUS_HELP = {
   active:      "Confirmed racing on a schedule published for this season. You could turn up and ride.",
   unconfirmed: "Named in an older directory, but no current schedule found. It may still race, it may be long gone — this atlas does not know.",
@@ -418,10 +530,16 @@ const CONF = {
   draft:{label:"Draft", note:"From rider recollection (forum threads) or a retrospective article rather than a primary source. Treat names and dates as approximate."}
 };
 
+/* ==========================================================================
+   MAPS — state outlines as [lat, lon] rings.
+   TO ADD A STATE: add a key with `bounds` and `outline`, then add tracks whose
+   `state` matches. The projection and marker code are state-agnostic.
+   ========================================================================== */
 const MAPS = {
   California:{
     bounds:{latMin:32.3, latMax:42.2, lonMin:-124.6, lonMax:-114.0},
     outline:[
+      /* Pacific coast, south → north */
       [32.53,-117.12],[32.85,-117.26],[33.20,-117.39],[33.46,-117.71],[33.60,-117.93],
       [33.72,-118.10],[33.74,-118.41],[33.98,-118.47],[34.03,-118.80],[34.09,-119.07],
       [34.27,-119.29],[34.41,-119.70],[34.45,-120.47],[34.55,-120.65],[34.90,-120.66],
@@ -429,11 +547,18 @@ const MAPS = {
       [36.62,-121.93],[36.80,-121.79],[36.96,-122.02],[37.11,-122.32],[37.50,-122.50],
       [37.78,-122.51],[37.90,-122.60],[38.02,-122.98],[38.32,-123.05],[38.77,-123.53],
       [39.30,-123.80],[39.77,-123.83],[40.03,-124.07],[40.44,-124.41],[40.80,-124.19],
-      [41.30,-124.10],[41.75,-124.20],[42.00,-124.21],[42.00,-120.00],
+      [41.30,-124.10],[41.75,-124.20],[42.00,-124.21],
+      /* Oregon border, west → east */
+      [42.00,-120.00],
+      /* Nevada border: straight south to Tahoe, then the long diagonal */
       [39.00,-120.00],[38.00,-118.70],[37.00,-117.40],[36.00,-116.05],[35.00,-114.63],
+      /* Colorado River, north → south */
       [34.87,-114.63],[34.46,-114.35],[34.20,-114.14],[33.93,-114.52],[33.42,-114.52],
-      [33.03,-114.47],[32.72,-114.72],[32.62,-115.50],[32.55,-116.50],[32.53,-117.12]
+      [33.03,-114.47],[32.72,-114.72],
+      /* Mexican border, east → west */
+      [32.62,-115.50],[32.55,-116.50],[32.53,-117.12]
     ],
+    /* Optional city anchors drawn faintly for orientation */
     cities:[
       {name:"San Francisco",lat:37.77,lon:-122.42},
       {name:"Sacramento",lat:38.58,lon:-121.49},
@@ -444,8 +569,12 @@ const MAPS = {
   }
 };
 
+/* ==========================================================================
+   DATA
+   ========================================================================== */
 const DATA = {};
 
+/* --- Regions. Add a key here, then use it on tracks. --- */
 DATA.regions = {
   "sd":   {label:"San Diego & Imperial"},
   "ie":   {label:"Inland Empire"},
@@ -458,6 +587,7 @@ DATA.regions = {
   "sierra":{label:"Sierra Nevada & Eastern CA"}
 };
 
+/* --- The origin story shown in the collapsed card at the top --- */
 DATA.birthplace = {
   year:"1969",
   title:"Palms Park — the birthplace of BMX",
@@ -479,43 +609,73 @@ DATA.birthplace = {
   ]
 };
 
+/* --------------------------------------------------------------------------
+   TRACKS
+   TO ADD A TRACK: copy a row. Fields:
+     n  name          c  city           co county        r  region key
+     s  status key    lat/lon           f  founded (display text)
+     fy founded year (number|null, used by charts)
+     w  website       d  ABA/NBL district code   sanction   conf   note
+   Coordinates are city-level approximations unless a street address is given
+   in the note; they are for map placement, not navigation.
+   -------------------------------------------------------------------------- */
 DATA.tracks = [
   /* ---------- SAN DIEGO & IMPERIAL ---------- */
-  {n:"San Diego BMX",c:"San Diego (Kearny Mesa)",co:"San Diego",r:"sd",s:"active",lat:32.808,lon:-117.145,f:"Unknown",fy:null,w:"https://www.sandiegobmxtrack.com/",d:"CA02",sanction:"USA BMX",conf:"verified",note:"3170 Armstrong St. Listed historically as Kearny Moto Park. One of two tracks left in San Diego County after Chula Vista closed."},
-  {n:"Cactus Park BMX",c:"Lakeside",co:"San Diego",r:"sd",s:"active",lat:32.857,lon:-116.922,f:"Operator since 1989",fy:1989,w:"",d:"CA09",sanction:"USA BMX",conf:"verified",note:"Owned and run by Vincent McCurdy since 1989."},
-  {n:"Chula Vista BMX",c:"Chula Vista",co:"San Diego",r:"sd",s:"closed",lat:32.628,lon:-116.945,f:"Added after the training center opened in 1995",fy:1995,w:"",d:"",sanction:"USA BMX",conf:"verified",note:"At the Chula Vista Elite Athlete Training Center. Final race August 24, 2024; the operator cited facility costs. The separate Olympic-spec training track on the same campus remains."},
+  {n:"San Diego BMX",c:"San Diego (Kearny Mesa)",co:"San Diego",r:"sd",s:"active",lat:32.808,lon:-117.145,f:"Unknown",fy:null,w:"https://www.sandiegobmxtrack.com/",d:"CA02",sanction:"USA BMX",conf:"verified",
+   note:"3170 Armstrong St. Listed historically as Kearny Moto Park. One of two tracks left in San Diego County after Chula Vista closed."},
+  {n:"Cactus Park BMX",c:"Lakeside",co:"San Diego",r:"sd",s:"active",lat:32.857,lon:-116.922,f:"Operator since 1989",fy:null,w:"",d:"CA09",sanction:"USA BMX",conf:"verified",
+   note:"Owned and run by Vincent McCurdy since 1989."},
+  {n:"Chula Vista BMX",c:"Chula Vista",co:"San Diego",r:"sd",s:"closed",lat:32.628,lon:-116.945,f:"Added after the training center opened in 1995",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",
+   note:"At the Chula Vista Elite Athlete Training Center. Final race August 24, 2024; the operator cited facility costs. The separate Olympic-spec training track on the same campus remains."},
   {n:"Imperial Valley BMX",c:"El Centro",co:"Imperial",r:"sd",s:"unconfirmed",lat:32.792,lon:-115.563,f:"Unknown",fy:null,w:"",d:"CA21",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
+
   /* ---------- INLAND EMPIRE ---------- */
-  {n:"Grand Prix BMX at SoCal Fair",c:"Perris",co:"Riverside",r:"ie",s:"active",lat:33.787,lon:-117.205,f:"Racing by the late 1990s",fy:1998,w:"http://www.grandprixbmx.com",d:"CA24",sanction:"USA BMX",conf:"verified",note:"18700 Lake Perris Dr. Formerly Lake Perris BMX, which hosted a 401-moto ABA national in 1998 — the largest ABA national to that date. Operator changed hands from the Redman family in 2025."},
+  {n:"Grand Prix BMX at SoCal Fair",c:"Perris",co:"Riverside",r:"ie",s:"active",lat:33.787,lon:-117.205,f:"Racing by the late 1990s",fy:null,w:"http://www.grandprixbmx.com",d:"CA24",sanction:"USA BMX",conf:"verified",
+   note:"18700 Lake Perris Dr. Formerly Lake Perris BMX, which hosted a 401-moto ABA national in 1998 — the largest ABA national to that date. Operator changed hands from the Redman family in 2025."},
   {n:"Orange Show BMX",c:"San Bernardino",co:"San Bernardino",r:"ie",s:"unconfirmed",lat:34.086,lon:-117.288,f:"Unknown",fy:null,w:"",d:"CA16",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"At the National Orange Show grounds."},
   {n:"Cutting Edge BMX",c:"Ontario",co:"San Bernardino",r:"ie",s:"unconfirmed",lat:34.063,lon:-117.651,f:"Unknown",fy:null,w:"",d:"CA13",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"Historically the \u201cCutting Edge Nationals\u201d track."},
   {n:"Coyote BMX",c:"Yucca Valley",co:"San Bernardino",r:"ie",s:"unconfirmed",lat:34.114,lon:-116.432,f:"Unknown",fy:null,w:"",d:"CA23",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
-  {n:"Hesperia BMX Park",c:"Hesperia",co:"San Bernardino",r:"ie",s:"active",lat:34.417,lon:-117.310,f:"Racing as High Desert BMX by the late 1970s",fy:1978,w:"",d:"CA01",sanction:"USA BMX",conf:"verified",note:"17427 Live Oak St. Monday and Thursday night racing, with 2026 dates listed by USA BMX. Riders identify this as the former High Desert BMX — a track often misattributed to Barstow."},
+  {n:"Hesperia BMX Park",c:"Hesperia",co:"San Bernardino",r:"ie",s:"active",lat:34.417,lon:-117.310,f:"Racing as High Desert BMX by the late 1970s",fy:null,w:"",d:"CA01",sanction:"USA BMX",conf:"verified",
+   note:"17427 Live Oak St. Monday and Thursday night racing, with 2026 dates listed by USA BMX. Riders identify this as the former High Desert BMX — a track often misattributed to Barstow."},
   {n:"Horsemen's BMX",c:"Apple Valley",co:"San Bernardino",r:"ie",s:"unconfirmed",lat:34.501,lon:-117.186,f:"Unknown",fy:null,w:"",d:"CA01",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"At Horsemen's Center Park."},
   {n:"Palm Springs BMX",c:"Cathedral City",co:"Riverside",r:"ie",s:"unconfirmed",lat:33.780,lon:-116.465,f:"Unknown",fy:null,w:"",d:"CA23",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
   {n:"X Roads BMX",c:"Lucerne Valley",co:"San Bernardino",r:"ie",s:"unconfirmed",lat:34.443,lon:-116.971,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",note:""},
+
   /* ---------- GREATER LA & ORANGE COUNTY ---------- */
-  {n:"Palms Park BMX",c:"West Los Angeles (Palms)",co:"Los Angeles",r:"la",s:"closed",birthplace:true,lat:34.024,lon:-118.407,f:"First race July 10, 1969",fy:1969,w:"",d:"",sanction:"Pre-sanctioning / informal",conf:"verified",note:"The birthplace of BMX. Ran 1969–1984 under Ron Mackler, then roughly twenty more years under Rich Lee. Nothing remains on site."},
-  {n:"Bellflower BMX",c:"Bellflower",co:"Los Angeles",r:"la",s:"active",lat:33.888,lon:-118.135,f:"Unknown",fy:null,w:"https://www.usabmx.com/tracks/ca-bellflower-bmx",d:"CA22",sanction:"USA BMX",conf:"verified",note:"9030 Somerset Blvd. Monday night racing; events listed through late 2025."},
-  {n:"Industry Hills Expo Center",c:"City of Industry",co:"Los Angeles",r:"la",s:"active",national:true,lat:34.019,lon:-117.925,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",note:"Hosts the So Cal Nationals, the opening round of the USA BMX national series. A temporary national-event build rather than a weekly local track."},
+  {n:"Palms Park BMX",c:"West Los Angeles (Palms)",co:"Los Angeles",r:"la",s:"closed",birthplace:true,lat:34.024,lon:-118.407,f:"First race July 10, 1969",fy:1969,w:"",d:"",sanction:"Pre-sanctioning / informal",conf:"verified",
+   note:"The birthplace of BMX. Ran 1969–1984 under Ron Mackler, then roughly twenty more years under Rich Lee. Nothing remains on site."},
+  {n:"Bellflower BMX",c:"Bellflower",co:"Los Angeles",r:"la",s:"active",lat:33.888,lon:-118.135,f:"Unknown",fy:null,w:"https://www.usabmx.com/tracks/ca-bellflower-bmx",d:"CA22",sanction:"USA BMX",conf:"verified",
+   note:"9030 Somerset Blvd. Monday night racing; events listed through late 2025."},
+  {n:"Industry Hills Expo Center",c:"City of Industry",co:"Los Angeles",r:"la",s:"active",national:true,lat:34.019,lon:-117.925,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",
+   note:"Hosts the So Cal Nationals, the opening round of the USA BMX national series. A temporary national-event build rather than a weekly local track."},
   {n:"Antelope Valley BMX",c:"Lancaster",co:"Los Angeles",r:"la",s:"unconfirmed",lat:34.687,lon:-118.154,f:"Unknown",fy:null,w:"",d:"CA17",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
   {n:"Sycamore BMX",c:"Simi Valley",co:"Ventura",r:"la",s:"unconfirmed",lat:34.266,lon:-118.720,f:"Unknown",fy:null,w:"",d:"CA07",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
-  {n:"Orange Y BMX",c:"Orange",co:"Orange",r:"la",s:"closed",lat:33.797,lon:-117.848,f:"Founded 1976",fy:1976,w:"",d:"CA14",sanction:"ABA / USA BMX",conf:"verified",note:"\u201cThe World Famous Y.\u201d Hosted the California state finals thirty years running and was among the highest rider-count tracks in the country. Closed August 28, 2016 over a YMCA lease dispute; the land was sold in 2019. Orange County has had no sanctioned track since."},
-  {n:"B.U.M.S. track",c:"Long Beach (7th & Lew)",co:"Los Angeles",r:"la",s:"closed",lat:33.786,lon:-118.152,f:"c. 1970",fy:1970,w:"",d:"",sanction:"B.U.M.S.",conf:"draft",note:"A dirt lot on the corner of 7th and Lew that became the Bicycle United Motocross Society — the first BMX sanctioning body of any kind, California-only. Scot Breithaupt, then 13, offered 35 kids a race if they each chipped in a quarter. 150 turned up the following week."},
-  {n:"Escape Country",c:"Trabuco Canyon",co:"Orange",r:"la",s:"closed",lat:33.660,lon:-117.590,f:"Early 1970s",fy:1972,w:"",d:"",sanction:"Independent",conf:"draft",note:"One of four tracks listed in the first issue of BMX Action magazine."},
-  {n:"Dominguez Park",c:"Carson",co:"Los Angeles",r:"la",s:"closed",lat:33.865,lon:-118.245,f:"Early 1970s",fy:1972,w:"",d:"",sanction:"Independent",conf:"draft",note:"Also among the four tracks in BMX Action's first issue."},
+  {n:"Orange Y BMX",c:"Orange",co:"Orange",r:"la",s:"closed",lat:33.797,lon:-117.848,f:"Founded 1976",fy:1976,w:"",d:"CA14",sanction:"ABA / USA BMX",conf:"verified",
+   note:"\u201cThe World Famous Y.\u201d Hosted the California state finals thirty years running and was among the highest rider-count tracks in the country. Closed August 28, 2016 over a YMCA lease dispute; the land was sold in 2019. Orange County has had no sanctioned track since."},
+  {n:"B.U.M.S. track",c:"Long Beach (7th & Lew)",co:"Los Angeles",r:"la",s:"closed",lat:33.786,lon:-118.152,f:"c. 1970",fy:1970,w:"",d:"",sanction:"B.U.M.S.",conf:"draft",
+   note:"A dirt lot on the corner of 7th and Lew that became the Bicycle United Motocross Society — the first BMX sanctioning body of any kind, California-only. Scot Breithaupt, then 13, offered 35 kids a race if they each chipped in a quarter. 150 turned up the following week."},
+  {n:"Escape Country",c:"Trabuco Canyon",co:"Orange",r:"la",s:"closed",lat:33.660,lon:-117.590,f:"Early 1970s",fy:1972,w:"",d:"",sanction:"Independent",conf:"draft",
+   note:"One of four tracks listed in the first issue of BMX Action magazine."},
+  {n:"Dominguez Park",c:"Carson",co:"Los Angeles",r:"la",s:"closed",lat:33.865,lon:-118.245,f:"Early 1970s",fy:1972,w:"",d:"",sanction:"Independent",conf:"draft",
+   note:"Also among the four tracks in BMX Action's first issue."},
   {n:"Malibu Canyon",c:"Malibu",co:"Los Angeles",r:"la",s:"closed",lat:34.070,lon:-118.700,f:"Early 1970s",fy:1973,w:"",d:"",sanction:"Independent",conf:"draft",note:"Named in retrospectives of the earliest California tracks."},
   {n:"Redondo Beach track",c:"Redondo Beach",co:"Los Angeles",r:"la",s:"closed",lat:33.850,lon:-118.390,f:"Early 1970s",fy:1973,w:"",d:"",sanction:"Independent",conf:"draft",note:"Named in retrospectives of the earliest California tracks."},
   {n:"Ascot Park BMX",c:"Gardena",co:"Los Angeles",r:"la",s:"closed",lat:33.888,lon:-118.278,f:"1970s–80s",fy:1978,w:"",d:"",sanction:"ABA / NBL era",conf:"draft",note:"Remembered as one of the era's biggest SoCal tracks. Rider recollection only."},
   {n:"Alpine BMX",c:"Torrance",co:"Los Angeles",r:"la",s:"closed",lat:33.836,lon:-118.341,f:"1970s–80s",fy:1979,w:"",d:"",sanction:"ABA",conf:"draft",note:"Rider recollection only."},
+
   /* ---------- CENTRAL COAST ---------- */
-  {n:"Manzanita Park BMX",c:"Prunedale / Salinas",co:"Monterey",r:"cc",s:"active",lat:36.783,lon:-121.700,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",note:"17100 Castroville Blvd. Anchor track on the NorCal 4-Star Series, on the 2026 schedule twice."},
+  {n:"Manzanita Park BMX",c:"Prunedale / Salinas",co:"Monterey",r:"cc",s:"active",lat:36.783,lon:-121.700,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",
+   note:"17100 Castroville Blvd. Anchor track on the NorCal 4-Star Series, on the 2026 schedule twice."},
   {n:"Santa Barbara BMX",c:"Santa Barbara",co:"Santa Barbara",r:"cc",s:"unconfirmed",lat:34.437,lon:-119.784,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",note:""},
   {n:"Atascadero BMX",c:"Atascadero",co:"San Luis Obispo",r:"cc",s:"unconfirmed",lat:35.489,lon:-120.671,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",note:""},
+
   /* ---------- SAN JOAQUIN VALLEY ---------- */
-  {n:"Metro BMX",c:"Bakersfield",co:"Kern",r:"sjv",s:"active",national:true,lat:35.373,lon:-119.018,f:"Unknown",fy:null,w:"",d:"CA06",sanction:"USA BMX",conf:"verified",note:"Hosts the Golden State Nationals — a stop on the USA BMX national series. Known for the rail line and water tower framing the third turn."},
-  {n:"Airtime BMX",c:"Reedley",co:"Fresno",r:"sjv",s:"active",lat:36.615,lon:-119.470,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",note:"18862 American Ave. Hosts multiple NorCal 4-Star Series weekends and the Dorsey Cup."},
-  {n:"Bakersfield BMX",c:"Bakersfield",co:"Kern",r:"sjv",s:"unconfirmed",lat:35.400,lon:-118.985,f:"Unknown",fy:null,w:"",d:"CA06",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"A second Kern County track listed separately from Metro BMX. Current status unresolved."},
+  {n:"Metro BMX",c:"Bakersfield",co:"Kern",r:"sjv",s:"active",national:true,lat:35.373,lon:-119.018,f:"Unknown",fy:null,w:"",d:"CA06",sanction:"USA BMX",conf:"verified",
+   note:"Hosts the Golden State Nationals — a stop on the USA BMX national series. Known for the rail line and water tower framing the third turn."},
+  {n:"Airtime BMX",c:"Reedley",co:"Fresno",r:"sjv",s:"active",lat:36.615,lon:-119.470,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",
+   note:"18862 American Ave. Hosts multiple NorCal 4-Star Series weekends and the Dorsey Cup."},
+  {n:"Bakersfield BMX",c:"Bakersfield",co:"Kern",r:"sjv",s:"unconfirmed",lat:35.400,lon:-118.985,f:"Unknown",fy:null,w:"",d:"CA06",sanction:"ABA (2010–11 listing)",conf:"estimated",
+   note:"A second Kern County track listed separately from Metro BMX. Current status unresolved."},
   {n:"Atwater PAL BMX",c:"Atwater",co:"Merced",r:"sjv",s:"unconfirmed",lat:37.348,lon:-120.609,f:"Unknown",fy:null,w:"",d:"CA25",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"Run through the Police Activities League."},
   {n:"Hanford BMX",c:"Hanford",co:"Kings",r:"sjv",s:"unconfirmed",lat:36.327,lon:-119.646,f:"Unknown",fy:null,w:"",d:"CA05",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
   {n:"Lemoore Action Park BMX",c:"Lemoore",co:"Kings",r:"sjv",s:"unconfirmed",lat:36.301,lon:-119.783,f:"Unknown",fy:null,w:"",d:"CA05",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
@@ -524,73 +684,124 @@ DATA.tracks = [
   {n:"Orange Cove Ultimate BMX",c:"Orange Cove",co:"Fresno",r:"sjv",s:"unconfirmed",lat:36.624,lon:-119.314,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",note:"Run through the city."},
   {n:"Monster BMX",c:"Taft",co:"Kern",r:"sjv",s:"unconfirmed",lat:35.142,lon:-119.457,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",note:""},
   {n:"KV Bike Park",c:"Kernville",co:"Kern",r:"sjv",s:"unconfirmed",lat:35.755,lon:-118.425,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",note:""},
+
   /* ---------- SACRAMENTO VALLEY & FOOTHILLS ---------- */
   {n:"Elkhorn BMX",c:"Rio Linda",co:"Sacramento",r:"sac",s:"active",lat:38.684,lon:-121.451,f:"Unknown",fy:null,w:"",d:"CA26",sanction:"USA BMX",conf:"verified",note:"848 Elkhorn Blvd. On the NorCal 4-Star Series schedule."},
-  {n:"Frogtown BMX",c:"Angels Camp",co:"Calaveras",r:"sac",s:"active",lat:38.070,lon:-120.545,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",note:"245 Gunclub Rd, at the Calaveras County Fairgrounds. Not present in the 2010–11 directory, so likely a newer or revived track."},
-  {n:"Silver Dollar BMX (new site)",c:"Chico",co:"Butte",r:"sac",s:"building",lat:39.795,lon:-121.855,f:"Under construction since 2023",fy:null,w:"https://silverdollarbmx.com/",d:"CA12",sanction:"USA BMX",conf:"verified",note:"Replacement track near Chico Municipal Airport. Volunteers were still building as of late 2025; racing had not resumed."},
-  {n:"Silver Dollar BMX (original)",c:"Chico",co:"Butte",r:"sac",s:"closed",lat:39.720,lon:-121.827,f:"Nonprofit founded 2000",fy:2000,w:"https://silverdollarbmx.com/",d:"CA12",sanction:"USA BMX",conf:"verified",note:"Held a 30-year no-cost city lease beside the Silver Dollar Fairgrounds. The city reclaimed the site in 2021 for emergency housing following Warren v. City of Chico; the track closed that November."},
-  {n:"Oak Creek BMX",c:"Roseville",co:"Placer",r:"sac",s:"active",national:true,lat:38.747,lon:-121.293,f:"Unknown",fy:null,w:"https://www.oakcreekbmx.org/",d:"CA11",sanction:"USA BMX",conf:"verified",note:"648 Riverside Ave. Wednesday night racing and Thursday practice, volunteer-run, with 2026 dates published. Hosted the USA BMX Nor-Cal Nationals in 2024 — roughly 4,000 attendees and an estimated $1.5 million in local spending."},
+  {n:"Frogtown BMX",c:"Angels Camp",co:"Calaveras",r:"sac",s:"active",lat:38.070,lon:-120.545,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",
+   note:"245 Gunclub Rd, at the Calaveras County Fairgrounds. Not present in the 2010–11 directory, so likely a newer or revived track."},
+  {n:"Silver Dollar BMX (new site)",c:"Chico",co:"Butte",r:"sac",s:"building",lat:39.795,lon:-121.855,f:"Under construction since 2023",fy:null,w:"https://silverdollarbmx.com/",d:"CA12",sanction:"USA BMX",conf:"verified",
+   note:"Replacement track near Chico Municipal Airport. Volunteers were still building as of late 2025; racing had not resumed."},
+  {n:"Silver Dollar BMX (original)",c:"Chico",co:"Butte",r:"sac",s:"closed",lat:39.720,lon:-121.827,f:"Nonprofit founded 2000",fy:2000,w:"https://silverdollarbmx.com/",d:"CA12",sanction:"USA BMX",conf:"verified",
+   note:"Held a 30-year no-cost city lease beside the Silver Dollar Fairgrounds. The city reclaimed the site in 2021 for emergency housing following Warren v. City of Chico; the track closed that November."},
+  {n:"Oak Creek BMX",c:"Roseville",co:"Placer",r:"sac",s:"active",national:true,lat:38.747,lon:-121.293,f:"Unknown",fy:null,w:"https://www.oakcreekbmx.org/",d:"CA11",sanction:"USA BMX",conf:"verified",
+   note:"648 Riverside Ave. Wednesday night racing and Thursday practice, volunteer-run, with 2026 dates published. Hosted the USA BMX Nor-Cal Nationals in 2024 — roughly 4,000 attendees and an estimated $1.5 million in local spending."},
   {n:"Riverfront BMX",c:"Marysville",co:"Yuba",r:"sac",s:"unconfirmed",lat:39.146,lon:-121.591,f:"Unknown",fy:null,w:"",d:"CA12",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
-  {n:"Patterson BMX",c:"Patterson",co:"Stanislaus",r:"sac",s:"unconfirmed",lat:37.472,lon:-121.130,f:"Unknown",fy:null,w:"",d:"CA10",sanction:"ABA + NBL (dual listing)",conf:"estimated",note:"One of very few California tracks that appeared under both sanctioning bodies in the same directory."},
-  {n:"Kings BMX Raceway",c:"Modesto",co:"Stanislaus",r:"sac",s:"closed",lat:37.639,lon:-120.997,f:"1976",fy:1976,w:"",d:"",sanction:"NBA, then UBR",conf:"draft",note:"Became the first track of the United Bicycle Racers when John Valdez founded that sanction in Modesto in 1977."},
-  {n:"Sacramento Raceway BMX",c:"Sacramento",co:"Sacramento",r:"sac",s:"closed",lat:38.505,lon:-121.290,f:"1975",fy:1975,w:"",d:"",sanction:"Early sanctioning",conf:"draft",note:"Rider recollection describes a first race in May 1975 with a rubber-band start and 30 riders over two laps."},
+  {n:"Patterson BMX",c:"Patterson",co:"Stanislaus",r:"sac",s:"unconfirmed",lat:37.472,lon:-121.130,f:"Unknown",fy:null,w:"",d:"CA10",sanction:"ABA + NBL (dual listing)",conf:"estimated",
+   note:"One of very few California tracks that appeared under both sanctioning bodies in the same directory."},
+  {n:"Kings BMX Raceway",c:"Modesto",co:"Stanislaus",r:"sac",s:"closed",lat:37.639,lon:-120.997,f:"1976",fy:1976,w:"",d:"",sanction:"NBA, then UBR",conf:"draft",
+   note:"Became the first track of the United Bicycle Racers when John Valdez founded that sanction in Modesto in 1977."},
+  {n:"Sacramento Raceway BMX",c:"Sacramento",co:"Sacramento",r:"sac",s:"closed",lat:38.505,lon:-121.290,f:"1975",fy:1975,w:"",d:"",sanction:"Early sanctioning",conf:"draft",
+   note:"Rider recollection describes a first race in May 1975 with a rubber-band start and 30 riders over two laps."},
+
   /* ---------- SAN FRANCISCO BAY AREA ---------- */
   {n:"North Bay BMX",c:"Napa",co:"Napa",r:"bay",s:"active",lat:38.297,lon:-122.286,f:"Unknown",fy:null,w:"",d:"CA04",sanction:"USA BMX",conf:"verified",note:"Two weekends on the 2026 NorCal 4-Star Series schedule."},
-  {n:"Morgan Hill BMX",c:"Morgan Hill",co:"Santa Clara",r:"bay",s:"active",lat:37.130,lon:-121.654,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",note:"On the 2026 NorCal 4-Star Series schedule with a date still to be announced. Absent from the 2010–11 directory."},
-  {n:"Livermore BMX",c:"Livermore",co:"Alameda",r:"bay",s:"unconfirmed",lat:37.669,lon:-121.744,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",note:"4444 East Ave, run through the Livermore Area Recreation and Park District. Appears in two independent directories."},
-  {n:"San Ramon BMX",c:"San Ramon",co:"Contra Costa",r:"bay",s:"unconfirmed",lat:37.766,lon:-121.978,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",note:"Bollinger Canyon Rd at San Ramon Valley Blvd. Appears in two independent directories."},
+  {n:"Morgan Hill BMX",c:"Morgan Hill",co:"Santa Clara",r:"bay",s:"active",lat:37.130,lon:-121.654,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",
+   note:"On the 2026 NorCal 4-Star Series schedule with a date still to be announced. Absent from the 2010–11 directory."},
+  {n:"Livermore BMX",c:"Livermore",co:"Alameda",r:"bay",s:"unconfirmed",lat:37.669,lon:-121.744,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",
+   note:"4444 East Ave, run through the Livermore Area Recreation and Park District. Appears in two independent directories."},
+  {n:"San Ramon BMX",c:"San Ramon",co:"Contra Costa",r:"bay",s:"unconfirmed",lat:37.766,lon:-121.978,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",
+   note:"Bollinger Canyon Rd at San Ramon Valley Blvd. Appears in two independent directories."},
   {n:"Santa Clara PAL BMX",c:"Santa Clara",co:"Santa Clara",r:"bay",s:"unconfirmed",lat:37.354,lon:-121.955,f:"Unknown",fy:null,w:"",d:"CA08",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"Run through the police department's PAL program."},
   {n:"CAA International Trails",c:"San Lorenzo",co:"Alameda",r:"bay",s:"unconfirmed",lat:37.681,lon:-122.124,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"draft",note:"Listed in 2010–11; likely defunct."},
   {n:"Oakland Coliseum BMX",c:"Oakland",co:"Alameda",r:"bay",s:"closed",lat:37.751,lon:-122.200,f:"1974",fy:1974,w:"",d:"",sanction:"NBA",conf:"draft",note:"A parking-lot track, among the earliest NorCal race sites. Rider recollection only."},
+
   /* ---------- NORTH COAST & FAR NORTH ---------- */
   {n:"Redwood Empire BMX",c:"Eureka",co:"Humboldt",r:"nc",s:"unconfirmed",lat:40.802,lon:-124.164,f:"Unknown",fy:null,w:"",d:"CA18",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"The most remote track in the state directory."},
   {n:"Boomtown BMX",c:"Redding / Summit City",co:"Shasta",r:"nc",s:"unconfirmed",lat:40.679,lon:-122.395,f:"Unknown",fy:null,w:"",d:"CA18",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
   {n:"Rusty Bowl BMX",c:"Ukiah",co:"Mendocino",r:"nc",s:"unconfirmed",lat:39.150,lon:-123.208,f:"Unknown",fy:null,w:"",d:"CA15",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
+
   /* ---------- SIERRA NEVADA & EASTERN CALIFORNIA ---------- */
   {n:"South Lake Tahoe BMX",c:"South Lake Tahoe",co:"El Dorado",r:"sierra",s:"unconfirmed",lat:38.940,lon:-119.977,f:"Unknown",fy:null,w:"",d:"CA18",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
-  {n:"Truckee BMX",c:"Truckee",co:"Nevada",r:"sierra",s:"unconfirmed",lat:39.328,lon:-120.183,f:"Unknown",fy:null,w:"",d:"CA18",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"Distinct from the Truckee Bike Park pump track at Riverview Sports Park."},
+  {n:"Truckee BMX",c:"Truckee",co:"Nevada",r:"sierra",s:"unconfirmed",lat:39.328,lon:-120.183,f:"Unknown",fy:null,w:"",d:"CA18",sanction:"ABA (2010–11 listing)",conf:"estimated",
+   note:"Distinct from the Truckee Bike Park pump track at Riverview Sports Park."},
   {n:"Mt. Thom BMX",c:"Bishop",co:"Inyo",r:"sierra",s:"unconfirmed",lat:37.364,lon:-118.395,f:"Unknown",fy:null,w:"",d:"CA05",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
 
-  /* ---------- SECOND RESEARCH PASS ---------- */
-  {n:"Santa Maria BMX",c:"Santa Maria",co:"Santa Barbara",r:"cc",s:"active",lat:34.965,lon:-120.415,f:"Opened 2008",fy:2008,w:"",d:"",sanction:"USA BMX",conf:"verified",note:"At the Santa Maria Elks Lodge grounds, after years of failed siting attempts at Waller Park and the rodeo grounds. A longer, less technical layout aimed at novice and intermediate riders, with real restrooms and a full snack bar. Draws riders from as far as Paso Robles."},
-  {n:"Freedom Park BMX Raceway",c:"Camarillo",co:"Ventura",r:"la",s:"active",lat:34.213,lon:-119.094,f:"Park established 1976",fy:null,w:"https://freedomparkbmx.com",d:"",sanction:"USA BMX",conf:"verified",note:"530 Convair St, in a Pleasant Valley Recreation & Park District facility near Camarillo Airport. Signature arena-style raceway with a brick start hill. Described as the longest continuously operating BMX track in west Ventura County."},
-  {n:"Yarnell Street",c:"Sylmar",co:"Los Angeles",r:"la",s:"closed",lat:34.307,lon:-118.443,f:"c. 1972",fy:1972,w:"",d:"",sanction:"NBA",conf:"draft",note:"Ernie Alexander's steep downhill course, where riders reportedly hit 40–45 mph — closer to a modern downhill mountain bike run than a groomed BMX track. Its popularity became close to a full-time job for Alexander, and led him to formalize the National Bicycle Association in 1973. Arguably the second most consequential track in California after Palms Park."},
-  {n:"Soledad Sands",c:"Santa Clarita (Soledad Canyon)",co:"Los Angeles",r:"la",s:"closed",lat:34.417,lon:-118.437,f:"Early 1970s",fy:1973,w:"",d:"",sanction:"NBA",conf:"draft",note:"Another early Alexander downhill venue. The NBA was originally based in Soledad."},
-  {n:"Randall Ranch",c:"Location unconfirmed (LA area)",co:"Los Angeles",r:"la",s:"closed",lat:34.480,lon:-118.560,f:"Early 1970s",fy:1973,w:"",d:"",sanction:"NBA",conf:"draft",note:"Named alongside Soledad Sands and Yarnell as one of Alexander's early downhill tracks. Exact location not established — the map pin is approximate and should not be trusted."},
+  /* ======================================================================
+     SECOND RESEARCH PASS
+     Added after a fresh search round. Two confirmed active tracks that the
+     archived directory missed entirely, plus a much deeper historic roster
+     drawn from rider-recollection threads and period retrospectives.
+     Nearly all the historic entries are DRAFT tier: names and locations are
+     leads, not verified fact. See the Method tab.
+     ====================================================================== */
+
+  /* ---------- ACTIVE, PREVIOUSLY MISSED ---------- */
+  {n:"Santa Maria BMX",c:"Santa Maria",co:"Santa Barbara",r:"cc",s:"active",lat:34.965,lon:-120.415,f:"Opened 2008",fy:2008,w:"",d:"",sanction:"USA BMX",conf:"verified",
+   note:"At the Santa Maria Elks Lodge grounds, after years of failed siting attempts at Waller Park and the rodeo grounds. A longer, less technical layout aimed at novice and intermediate riders, with real restrooms and a full snack bar. Draws riders from as far as Paso Robles."},
+  {n:"Freedom Park BMX Raceway",c:"Camarillo",co:"Ventura",r:"la",s:"active",lat:34.213,lon:-119.094,f:"Park established 1976",fy:null,w:"https://freedomparkbmx.com",d:"",sanction:"USA BMX",conf:"verified",
+   note:"530 Convair St, in a Pleasant Valley Recreation & Park District facility near Camarillo Airport. Signature arena-style raceway with a brick start hill. Described as the longest continuously operating BMX track in west Ventura County."},
+
+  /* ---------- HISTORIC: GREATER LA & ORANGE COUNTY ---------- */
+  {n:"Yarnell Street",c:"Sylmar",co:"Los Angeles",r:"la",s:"closed",lat:34.307,lon:-118.443,f:"c. 1972",fy:1972,w:"",d:"",sanction:"NBA",conf:"draft",
+   note:"Ernie Alexander's steep downhill course, where riders reportedly hit 40–45 mph — closer to a modern downhill mountain bike run than a groomed BMX track. Its popularity became close to a full-time job for Alexander, and led him to formalize the National Bicycle Association in 1973. Arguably the second most consequential track in California after Palms Park."},
+  {n:"Soledad Sands",c:"Santa Clarita (Soledad Canyon)",co:"Los Angeles",r:"la",s:"closed",lat:34.417,lon:-118.437,f:"Early 1970s",fy:1973,w:"",d:"",sanction:"NBA",conf:"draft",
+   note:"Another early Alexander downhill venue. The NBA was originally based in Soledad."},
+  {n:"Randall Ranch",c:"Location unconfirmed (LA area)",co:"Los Angeles",r:"la",s:"closed",lat:34.480,lon:-118.560,f:"Early 1970s",fy:1973,w:"",d:"",sanction:"NBA",conf:"draft",
+   note:"Named alongside Soledad Sands and Yarnell as one of Alexander's early downhill tracks. Exact location not established — the map pin is approximate and should not be trusted."},
   {n:"Van Nuys Teen Center",c:"Van Nuys",co:"Los Angeles",r:"la",s:"closed",lat:34.187,lon:-118.449,f:"1970s",fy:1975,w:"",d:"",sanction:"NBA",conf:"draft",note:"Known to riders simply as the Teen Center."},
   {n:"Devonshire Downs",c:"Northridge",co:"Los Angeles",r:"la",s:"closed",lat:34.246,lon:-118.529,f:"1970s",fy:1975,w:"",d:"",sanction:"NBA era",conf:"draft",note:"A former fairgrounds site later absorbed by CSU Northridge."},
-  {n:"Azusa BMX (two tracks)",c:"Azusa",co:"Los Angeles",r:"la",s:"closed",lat:34.155,lon:-117.895,f:"Racing by 1983",fy:1983,w:"",d:"",sanction:"ABA and NBL",conf:"draft",note:"Two separate tracks on Azusa Canyon Road — the southern one ABA, the northern one NBL. One of very few places in California where rival sanctions ran on the same road."},
-  {n:"Gnarler Park",c:"Long Beach",co:"Los Angeles",r:"la",s:"closed",lat:33.798,lon:-118.167,f:"1970s",fy:1975,w:"",d:"",sanction:"Unknown",conf:"draft",note:"Remembered for a feature riders called Breithaupt Mountain. Whether this is a separate site from the B.U.M.S. lot is not established."},
+  {n:"Azusa BMX (two tracks)",c:"Azusa",co:"Los Angeles",r:"la",s:"closed",lat:34.155,lon:-117.895,f:"Racing by 1983",fy:1983,w:"",d:"",sanction:"ABA and NBL",conf:"draft",
+   note:"Two separate tracks on Azusa Canyon Road — the southern one ABA, the northern one NBL. One of very few places in California where rival sanctions ran on the same road."},
+  {n:"Gnarler Park",c:"Long Beach",co:"Los Angeles",r:"la",s:"closed",lat:33.798,lon:-118.167,f:"1970s",fy:1975,w:"",d:"",sanction:"Unknown",conf:"draft",
+   note:"Remembered for a feature riders called Breithaupt Mountain. Whether this is a separate site from the B.U.M.S. lot is not established."},
   {n:"Harbor City BMX",c:"Harbor City",co:"Los Angeles",r:"la",s:"closed",lat:33.799,lon:-118.297,f:"1970s–80s",fy:1978,w:"",d:"",sanction:"ABA",conf:"draft",note:"Remembered as sitting beneath a large bridge."},
-  {n:"Saddleback Park",c:"Orange (Irvine Lake area)",co:"Orange",r:"la",s:"closed",lat:33.770,lon:-117.680,f:"Early 1970s",fy:1972,w:"",d:"",sanction:"Independent",conf:"draft",note:"A downhill course at the motocross park, named among the earliest tracks operating alongside Escape Country and Dominguez."},
+  {n:"Saddleback Park",c:"Orange (Irvine Lake area)",co:"Orange",r:"la",s:"closed",lat:33.770,lon:-117.680,f:"Early 1970s",fy:1972,w:"",d:"",sanction:"Independent",conf:"draft",
+   note:"A downhill course at the motocross park, named among the earliest tracks operating alongside Escape Country and Dominguez."},
   {n:"Western Sportsorama",c:"Orange",co:"Orange",r:"la",s:"closed",lat:33.788,lon:-117.853,f:"1970s",fy:1975,w:"",d:"",sanction:"Unknown",conf:"draft",note:""},
   {n:"Santa Ana Elks",c:"Santa Ana",co:"Orange",r:"la",s:"closed",lat:33.740,lon:-117.868,f:"1970s",fy:1975,w:"",d:"",sanction:"Unknown",conf:"draft",note:"On Lyon Street near the Santa Ana zoo."},
   {n:"Fountain Valley Elks",c:"Fountain Valley",co:"Orange",r:"la",s:"closed",lat:33.709,lon:-117.953,f:"Early 1970s",fy:1973,w:"",d:"",sanction:"Unknown",conf:"draft",note:"Named among the tracks already running when the NBA formed."},
   {n:"La Palma",c:"La Palma",co:"Orange",r:"la",s:"closed",lat:33.847,lon:-118.047,f:"Early 1970s",fy:1973,w:"",d:"",sanction:"Unknown",conf:"draft",note:"Named among the earliest operating California tracks."},
-  {n:"Irvine BMX",c:"Irvine",co:"Orange",r:"la",s:"closed",lat:33.686,lon:-117.826,f:"1970s–80s",fy:1978,w:"",d:"",sanction:"ABA and NBL",conf:"draft",note:"Two Irvine tracks are remembered, including a Dragstrip Raceway course in the trees. Riders and Irvine city officials disagree about exactly where the main track stood."},
+  {n:"Irvine BMX",c:"Irvine",co:"Orange",r:"la",s:"closed",lat:33.686,lon:-117.826,f:"1970s–80s",fy:1978,w:"",d:"",sanction:"ABA and NBL",conf:"draft",
+   note:"Two Irvine tracks are remembered, including a Dragstrip Raceway course in the trees. Riders and Irvine city officials disagree about exactly where the main track stood."},
   {n:"Westminster BMX",c:"Westminster",co:"Orange",r:"la",s:"closed",lat:33.759,lon:-117.994,f:"1970s–80s",fy:1979,w:"",d:"",sanction:"ABA",conf:"draft",note:"A small track; the site is believed to be an ordinary park now."},
   {n:"La Mirada BMX",c:"La Mirada",co:"Los Angeles",r:"la",s:"closed",lat:33.917,lon:-118.012,f:"1970s–80s",fy:1979,w:"",d:"",sanction:"NBL",conf:"draft",note:""},
   {n:"Yorba Linda BMX",c:"Yorba Linda",co:"Orange",r:"la",s:"closed",lat:33.889,lon:-117.813,f:"1970s–80s",fy:1979,w:"",d:"",sanction:"ABA",conf:"draft",note:"Frequently named as a favourite among West Coast riders of the era."},
-  {n:"Anaheim Convention Center",c:"Anaheim",co:"Orange",r:"la",s:"closed",lat:33.802,lon:-117.919,f:"c. 1980",fy:1980,w:"",d:"",sanction:"ABA",conf:"draft",note:"An indoor ABA national run on wood jumps over concrete. A one-off venue rather than a standing track."},
-  {n:"Orange County Fairgrounds",c:"Costa Mesa",co:"Orange",r:"la",s:"closed",lat:33.674,lon:-117.918,f:"1976",fy:1976,w:"",d:"",sanction:"NBA",conf:"draft",note:"Hosted the 1976 NBA Grand Nationals, the finale of what Scot Breithaupt calls the first true national series."},
+  {n:"Anaheim Convention Center",c:"Anaheim",co:"Orange",r:"la",s:"closed",lat:33.802,lon:-117.919,f:"c. 1980",fy:1980,w:"",d:"",sanction:"ABA",conf:"draft",
+   note:"An indoor ABA national run on wood jumps over concrete. A one-off venue rather than a standing track."},
+  {n:"Orange County Fairgrounds",c:"Costa Mesa",co:"Orange",r:"la",s:"closed",lat:33.674,lon:-117.918,f:"1976",fy:1976,w:"",d:"",sanction:"NBA",conf:"draft",
+   note:"Hosted the 1976 NBA Grand Nationals, the finale of what Scot Breithaupt calls the first true national series."},
   {n:"Anaheim Malibu Grand Prix",c:"Anaheim",co:"Orange",r:"la",s:"closed",lat:33.809,lon:-117.913,f:"c. 1980–81",fy:1980,w:"",d:"",sanction:"Unknown",conf:"draft",note:"Briefly raced on pavement rather than dirt."},
   {n:"Santa Clarita BMX",c:"Santa Clarita",co:"Los Angeles",r:"la",s:"closed",lat:34.391,lon:-118.542,f:"1970s–80s",fy:1980,w:"",d:"",sanction:"NBL",conf:"draft",note:""},
-  {n:"Corona Downhill",c:"Corona",co:"Riverside",r:"ie",s:"closed",lat:33.875,lon:-117.566,f:"1970s",fy:1975,w:"",d:"",sanction:"Unknown",conf:"draft",note:"A legendary downhill. Scot Breithaupt filmed point-of-view footage here for On Any Sunday II in 1978, with a 35mm camera taped to his bike, and recalls a jump of over 75 feet."},
+
+  /* ---------- HISTORIC: INLAND EMPIRE ---------- */
+  {n:"Corona Downhill",c:"Corona",co:"Riverside",r:"ie",s:"closed",lat:33.875,lon:-117.566,f:"1970s",fy:1975,w:"",d:"",sanction:"Unknown",conf:"draft",
+   note:"A legendary downhill. Scot Breithaupt filmed point-of-view footage here for On Any Sunday II in 1978, with a 35mm camera taped to his bike, and recalls a jump of over 75 feet."},
   {n:"Snipes Downhill",c:"Norco",co:"Riverside",r:"ie",s:"closed",lat:33.931,lon:-117.549,f:"1970s–80s",fy:1978,w:"",d:"",sanction:"NBL",conf:"draft",note:""},
-  {n:"Sunnymead BMX",c:"Moreno Valley",co:"Riverside",r:"ie",s:"closed",lat:33.943,lon:-117.230,f:"Racing through the 1980s",fy:1980,w:"",d:"",sanction:"NBL, later ABA",conf:"draft",note:"In the town formerly known as Sunnymead. Riders confirm racing here in 1986."},
-  {n:"Riverside BMX (two tracks)",c:"Riverside",co:"Riverside",r:"ie",s:"closed",lat:33.954,lon:-117.396,f:"1970s–80s",fy:1979,w:"",d:"",sanction:"ABA and NBL",conf:"draft",note:"An ABA track and an NBL jumping area on the same property."},
+  {n:"Sunnymead BMX",c:"Moreno Valley",co:"Riverside",r:"ie",s:"closed",lat:33.943,lon:-117.230,f:"Racing through the 1980s",fy:1980,w:"",d:"",sanction:"NBL, later ABA",conf:"draft",
+   note:"In the town formerly known as Sunnymead. Riders confirm racing here in 1986."},
+  {n:"Riverside BMX (two tracks)",c:"Riverside",co:"Riverside",r:"ie",s:"closed",lat:33.954,lon:-117.396,f:"1970s–80s",fy:1979,w:"",d:"",sanction:"ABA and NBL",conf:"draft",
+   note:"An ABA track and an NBL jumping area on the same property."},
   {n:"Prado Park BMX",c:"Chino",co:"San Bernardino",r:"ie",s:"closed",lat:33.968,lon:-117.652,f:"1970s–80s",fy:1980,w:"",d:"",sanction:"Unknown",conf:"draft",note:""},
-  {n:"Montclair Grand Prix Raceway",c:"Montclair",co:"San Bernardino",r:"ie",s:"closed",lat:34.077,lon:-117.690,f:"1980s",fy:1984,w:"",d:"",sanction:"Unknown",conf:"draft",note:"Short-lived. Riders describe sneaking back onto the abandoned site into the late 1980s."},
+  {n:"Montclair Grand Prix Raceway",c:"Montclair",co:"San Bernardino",r:"ie",s:"closed",lat:34.077,lon:-117.690,f:"1980s",fy:1984,w:"",d:"",sanction:"Unknown",conf:"draft",
+   note:"Short-lived. Riders describe sneaking back onto the abandoned site into the late 1980s."},
   {n:"San Bernardino YMCA",c:"San Bernardino",co:"San Bernardino",r:"ie",s:"closed",lat:34.108,lon:-117.290,f:"1970s–80s",fy:1979,w:"",d:"",sanction:"Unknown",conf:"draft",note:""},
   {n:"Desert Hot Springs BMX",c:"Desert Hot Springs",co:"Riverside",r:"ie",s:"closed",lat:33.961,lon:-116.501,f:"1980s",fy:1985,w:"",d:"",sanction:"NBL",conf:"draft",note:"Remembered in connection with a Race Against Drugs programme."},
+
+  /* ---------- HISTORIC: SAN DIEGO ---------- */
   {n:"Balboa Park Velodrome BMX",c:"San Diego",co:"San Diego",r:"sd",s:"closed",lat:32.732,lon:-117.146,f:"1970s–80s",fy:1978,w:"",d:"",sanction:"Unknown",conf:"draft",note:"A BMX course associated with the Balboa Park velodrome."},
   {n:"Rancho San Diego Downhill",c:"El Cajon",co:"San Diego",r:"sd",s:"closed",lat:32.744,lon:-116.936,f:"Early 1970s",fy:1974,w:"",d:"",sanction:"NBA",conf:"draft",note:""},
+
+  /* ---------- HISTORIC: CENTRAL COAST ---------- */
   {n:"Stow Park BMX",c:"Goleta",co:"Santa Barbara",r:"cc",s:"closed",lat:34.440,lon:-119.826,f:"Racing by 1977",fy:1977,w:"",d:"",sanction:"ABA",conf:"draft",note:"A well-remembered Santa Barbara-area home track."},
-  {n:"Buellton BMX",c:"Buellton",co:"Santa Barbara",r:"cc",s:"closed",lat:34.614,lon:-120.193,f:"Closed before 2008",fy:null,w:"",d:"",sanction:"Unknown",conf:"estimated",note:"Its closure dissolved local support for BMX racing in the area for years, until the Santa Maria Elks track opened in 2008."},
+  {n:"Buellton BMX",c:"Buellton",co:"Santa Barbara",r:"cc",s:"closed",lat:34.614,lon:-120.193,f:"Closed before 2008",fy:null,w:"",d:"",sanction:"Unknown",conf:"estimated",
+   note:"Its closure dissolved local support for BMX racing in the area for years, until the Santa Maria Elks track opened in 2008."},
   {n:"Lompoc BMX",c:"Lompoc",co:"Santa Barbara",r:"cc",s:"closed",lat:34.639,lon:-120.458,f:"1970s–80s",fy:1980,w:"",d:"",sanction:"Probably ABA",conf:"draft",note:"Recalled as a poor layout that did not last long."},
+
+  /* ---------- HISTORIC: SAN FRANCISCO BAY AREA ---------- */
   {n:"Merritt College Downhill",c:"Oakland",co:"Alameda",r:"bay",s:"closed",lat:37.784,lon:-122.146,f:"1974",fy:1974,w:"",d:"",sanction:"NBA era",conf:"draft",note:"Among the very first Northern California tracks, named in early national listings."},
   {n:"McLaren Park Downhill",c:"San Francisco",co:"San Francisco",r:"bay",s:"closed",lat:37.719,lon:-122.420,f:"1975",fy:1975,w:"",d:"",sanction:"Early sanctioning",conf:"draft",note:"A downhill course in the city."},
-  {n:"Vallejo PAL BMX",c:"Vallejo",co:"Solano",r:"bay",s:"closed",lat:38.104,lon:-122.256,f:"1975",fy:1975,w:"",d:"",sanction:"NBA, later ABA",conf:"draft",note:"A semi-downhill and the home track of Ronnie and Richie Anderson. For a period, Vallejo dominated Northern California BMX."},
+  {n:"Vallejo PAL BMX",c:"Vallejo",co:"Solano",r:"bay",s:"closed",lat:38.104,lon:-122.256,f:"1975",fy:1975,w:"",d:"",sanction:"NBA, later ABA",conf:"draft",
+   note:"A semi-downhill and the home track of Ronnie and Richie Anderson. For a period, Vallejo dominated Northern California BMX."},
   {n:"Rheem Valley BMX",c:"Moraga",co:"Contra Costa",r:"bay",s:"closed",lat:37.855,lon:-122.130,f:"1976",fy:1976,w:"",d:"",sanction:"NBA",conf:"draft",note:"A semi-downhill course."},
   {n:"Hill Country Raceway",c:"Morgan Hill",co:"Santa Clara",r:"bay",s:"closed",lat:37.107,lon:-121.640,f:"1970s–80s",fy:1980,w:"",d:"",sanction:"ABA",conf:"draft",note:"Predecessor to today's Morgan Hill track, though not necessarily the same site."},
   {n:"San Martin Indoor",c:"San Martin",co:"Santa Clara",r:"bay",s:"closed",lat:37.086,lon:-121.611,f:"c. 1980",fy:1980,w:"",d:"",sanction:"UBR",conf:"draft",note:"One of California's rare indoor BMX tracks."},
@@ -600,10 +811,13 @@ DATA.tracks = [
   {n:"Malibu Grand Prix BMX",c:"Redwood City",co:"San Mateo",r:"bay",s:"closed",lat:37.487,lon:-122.229,f:"Racing by 1981",fy:1981,w:"",d:"",sanction:"ABA",conf:"draft",note:"An outdoor stadium-style layout at the Malibu Grand Prix complex."},
   {n:"Fairfield PAL BMX",c:"Fairfield",co:"Solano",r:"bay",s:"closed",lat:38.249,lon:-122.040,f:"c. 1980",fy:1980,w:"",d:"",sanction:"UBR",conf:"draft",note:"Run through the Police Activities League."},
   {n:"Windsor BMX",c:"Windsor",co:"Sonoma",r:"bay",s:"closed",lat:38.547,lon:-122.816,f:"1975–76",fy:1975,w:"",d:"",sanction:"NPSA",conf:"draft",note:"One of the few tracks recalled under the short-lived NPSA banner."},
+
+  /* ---------- HISTORIC: SACRAMENTO VALLEY & FOOTHILLS ---------- */
   {n:"Oakdale BMX",c:"Oakdale",co:"Stanislaus",r:"sac",s:"closed",lat:37.767,lon:-120.847,f:"1975–76",fy:1975,w:"",d:"",sanction:"NBA",conf:"draft",note:"Host of the first NBA Northern California national."},
   {n:"Prairie City BMX",c:"Rancho Cordova",co:"Sacramento",r:"sac",s:"closed",lat:38.618,lon:-121.187,f:"1975",fy:1975,w:"",d:"",sanction:"Early sanctioning",conf:"draft",note:"Both downhill and uphill sections."},
   {n:"Roseville Fairgrounds",c:"Roseville",co:"Placer",r:"sac",s:"closed",lat:38.762,lon:-121.272,f:"1975–76",fy:1975,w:"",d:"",sanction:"Early sanctioning",conf:"draft",note:"A semi-downhill at the fairgrounds, predating today's Oak Creek track."},
-  {n:"Marysville E Street",c:"Marysville",co:"Yuba",r:"sac",s:"closed",lat:39.146,lon:-121.591,f:"1974",fy:1974,w:"",d:"",sanction:"Early sanctioning",conf:"draft",note:"The original Marysville track, distinct from the later Riverfront site. Associated with Bruce and Linda Minton, who ran several Sacramento-area tracks."},
+  {n:"Marysville E Street",c:"Marysville",co:"Yuba",r:"sac",s:"closed",lat:39.146,lon:-121.591,f:"1974",fy:1974,w:"",d:"",sanction:"Early sanctioning",conf:"draft",
+   note:"The original Marysville track, distinct from the later Riverfront site. Associated with Bruce and Linda Minton, who ran several Sacramento-area tracks."},
   {n:"Pecan Park",c:"Orangevale",co:"Sacramento",r:"sac",s:"closed",lat:38.678,lon:-121.226,f:"1970s–80s",fy:1980,w:"",d:"",sanction:"Unknown",conf:"draft",note:"Another track in the Minton orbit, later run by Frank Blatt."},
   {n:"Woodland BMX",c:"Woodland",co:"Yolo",r:"sac",s:"closed",lat:38.679,lon:-121.773,f:"1970s",fy:1976,w:"",d:"",sanction:"Unknown",conf:"draft",note:"Recalled as residents-only, turning away riders from neighbouring towns."},
   {n:"Helvetia BMX",c:"West Sacramento",co:"Yolo",r:"sac",s:"closed",lat:38.580,lon:-121.530,f:"1974–75",fy:1974,w:"",d:"",sanction:"NBA",conf:"draft",note:"Held at the Helvetia motocross track."},
@@ -613,13 +827,22 @@ DATA.tracks = [
   {n:"Folsom Rodeo Arena",c:"Folsom",co:"Sacramento",r:"sac",s:"closed",lat:38.678,lon:-121.176,f:"1970s, revived in the 1990s",fy:1978,w:"",d:"",sanction:"Unknown",conf:"draft",note:"A second Folsom track was opened in the 1990s by Eric Dyer."},
   {n:"Rancho Cordova Indoor",c:"Rancho Cordova",co:"Sacramento",r:"sac",s:"closed",lat:38.589,lon:-121.303,f:"1980s",fy:1985,w:"",d:"",sanction:"Unknown",conf:"draft",note:"Built inside a former 84 Lumber building, with dirt laid over the concrete floor."},
   {n:"Delta BMX",c:"Lodi",co:"San Joaquin",r:"sac",s:"closed",lat:38.134,lon:-121.272,f:"1976",fy:1976,w:"",d:"",sanction:"NBA",conf:"draft",note:""},
+
+  /* ---------- HISTORIC: SAN JOAQUIN VALLEY ---------- */
   {n:"Stockton Fairgrounds",c:"Stockton",co:"San Joaquin",r:"sjv",s:"closed",lat:37.951,lon:-121.293,f:"1970s–80s",fy:1978,w:"",d:"",sanction:"Unknown",conf:"draft",note:""},
   {n:"Merced Fairgrounds",c:"Merced",co:"Merced",r:"sjv",s:"closed",lat:37.302,lon:-120.482,f:"1970s–80s",fy:1978,w:"",d:"",sanction:"Unknown",conf:"draft",note:""},
-  {n:"Rad E Cal BMX",c:"Fresno",co:"Fresno",r:"sjv",s:"closed",lat:36.746,lon:-119.772,f:"c. 1980",fy:1980,w:"",d:"",sanction:"UBR",conf:"draft",note:"Fresno also had an earlier NBA track off the side of Highway 99."},
+  {n:"Rad E Cal BMX",c:"Fresno",co:"Fresno",r:"sjv",s:"closed",lat:36.746,lon:-119.772,f:"c. 1980",fy:1980,w:"",d:"",sanction:"UBR",conf:"draft",
+   note:"Fresno also had an earlier NBA track off the side of Highway 99."},
   {n:"Visalia BMX",c:"Visalia",co:"Tulare",r:"sjv",s:"closed",lat:36.330,lon:-119.292,f:"1970s–80s",fy:1979,w:"",d:"",sanction:"Unknown",conf:"draft",note:""},
   {n:"Manteca BMX",c:"Manteca",co:"San Joaquin",r:"sjv",s:"closed",lat:37.797,lon:-121.216,f:"1970s–80s",fy:1979,w:"",d:"",sanction:"Unknown",conf:"draft",note:""}
 ];
 
+/* --------------------------------------------------------------------------
+   GROWTH ESTIMATES — count of BMX tracks operating in California, by year.
+   These are ESTIMATES with an uncertainty band, not a census. The only firmly
+   anchored point is 2010 (a directory count). Everything else is inferred.
+   TO REVISE: edit the low/mid/high numbers and the `basis` string.
+   -------------------------------------------------------------------------- */
 DATA.growth = [
   {year:1970, low:1,  mid:2,  high:4,  conf:"draft",     basis:"Palms Park plus a handful of informal SoCal lots. Breithaupt's B.U.M.S. races begin around now."},
   {year:1975, low:12, mid:20, high:32, conf:"draft",     basis:"NBA founded 1973 and expanding fast. BMX Action's first issue named only four formal tracks, but rider recollection lists roughly a dozen NorCal sites racing by 1975–76."},
@@ -635,15 +858,31 @@ DATA.growth = [
   {year:2025, low:15, mid:21, high:28, conf:"estimated", basis:"16 tracks confirmed racing on current published schedules, plus an unknown share of the 30-odd tracks carried from the older directory that were not individually reconfirmed."}
 ];
 
+/* --------------------------------------------------------------------------
+   SANCTIONING BODIES — for the parallel-existence timeline.
+   `end:null` means still operating.
+   -------------------------------------------------------------------------- */
 DATA.leagues = [
-  {abbr:"B.U.M.S.", name:"Bicycle United Motocross Society", start:1970, end:1974, color:"var(--ghost)", scope:"California only", note:"The first BMX sanctioning body of any kind, started by a teenaged Scot Breithaupt in Long Beach. Held state championships in 1972. Never intended to go national.", conf:"draft"},
-  {abbr:"NBA", name:"National Bicycle Association", start:1973, end:1981, color:"var(--accent-2)", scope:"West Coast, then national", note:"Founded by motorcycle race promoter Ernie Alexander and modeled on the AMA. The first national governing body for BMX. All but one of its tracks were in California.", conf:"estimated"},
-  {abbr:"NBL", name:"National Bicycle League", start:1974, end:2011, color:"var(--accent-3)", scope:"East Coast, then national", note:"Founded in Florida by George Esser as a nonprofit with an elected competition congress. Its UCI relationship helped make BMX an Olympic sport. Assets bought by the ABA in 2011.", conf:"verified"},
-  {abbr:"UBR", name:"United Bicycle Racers", start:1977, end:1983, color:"var(--warn)", scope:"California & Nevada", note:"Founded in Modesto by bike shop owner John Valdez on his 18th birthday. Deliberately local-first, deemphasizing nationals. Peaked around 32–34 tracks before going bankrupt.", conf:"estimated"},
-  {abbr:"ABA", name:"American Bicycle Association", start:1977, end:2011, color:"var(--ok)", scope:"National", note:"Incorporated October 13, 1977 in Chandler, Arizona by Merl Mennenga and Gene Roden. Became the largest sanction in the world; still the legal entity behind USA BMX.", conf:"verified"},
-  {abbr:"USA BMX", name:"USA BMX", start:2011, end:null, color:"var(--accent)", scope:"US, Canada & Puerto Rico", note:"Created when the ABA bought the struggling NBL's assets — unifying the sport under one banner for the first time in roughly 40 years. Roughly 350 tracks and 70,000 members at the merger.", conf:"verified"}
+  {abbr:"B.U.M.S.", name:"Bicycle United Motocross Society", start:1970, end:1974, color:"var(--ghost)", scope:"California only",
+   note:"The first BMX sanctioning body of any kind, started by a teenaged Scot Breithaupt in Long Beach. Held state championships in 1972. Never intended to go national.", conf:"draft"},
+  {abbr:"NBA", name:"National Bicycle Association", start:1973, end:1981, color:"var(--accent-2)", scope:"West Coast, then national",
+   note:"Founded by motorcycle race promoter Ernie Alexander and modeled on the AMA. The first national governing body for BMX. All but one of its tracks were in California.", conf:"estimated"},
+  {abbr:"NBL", name:"National Bicycle League", start:1974, end:2011, color:"var(--accent-3)", scope:"East Coast, then national",
+   note:"Founded in Florida by George Esser as a nonprofit with an elected competition congress. Its UCI relationship helped make BMX an Olympic sport. Assets bought by the ABA in 2011.", conf:"verified"},
+  {abbr:"UBR", name:"United Bicycle Racers", start:1977, end:1983, color:"var(--warn)", scope:"California & Nevada",
+   note:"Founded in Modesto by bike shop owner John Valdez on his 18th birthday. Deliberately local-first, deemphasizing nationals. Peaked around 32–34 tracks before going bankrupt.", conf:"estimated"},
+  {abbr:"ABA", name:"American Bicycle Association", start:1977, end:2011, color:"var(--ok)", scope:"National",
+   note:"Incorporated October 13, 1977 in Chandler, Arizona by Merl Mennenga and Gene Roden. Became the largest sanction in the world; still the legal entity behind USA BMX.", conf:"verified"},
+  {abbr:"USA BMX", name:"USA BMX", start:2011, end:null, color:"var(--accent)", scope:"US, Canada & Puerto Rico",
+   note:"Created when the ABA bought the struggling NBL's assets — unifying the sport under one banner for the first time in roughly 40 years. Roughly 350 tracks and 70,000 members at the merger.", conf:"verified"}
 ];
 
+/* --------------------------------------------------------------------------
+   GOOGLE TRENDS — US search interest in the term "BMX", 2004 → present.
+   Values are ANNUAL AVERAGES digitized by eye from a Google Trends screenshot,
+   so treat them as shape-accurate and value-approximate. Google's scale is
+   relative: 100 = the single highest month in the window, not an absolute count.
+   -------------------------------------------------------------------------- */
 DATA.trends = {
   scaleNote:"Google Trends indexes interest 0–100 relative to the peak month in the window. 100 here is a single month in 2008.",
   series:[
@@ -662,6 +901,9 @@ DATA.trends = {
   ]
 };
 
+/* --------------------------------------------------------------------------
+   SOURCES
+   -------------------------------------------------------------------------- */
 DATA.sources = [
   ["USA BMX — track and event pages","Current venue confirmations and 2025–2026 race schedules. The live event feed is what confirmed Hesperia and Oak Creek as still racing."],
   ["Golden State BMX / NorCal 4-Star Series (calbmx.com)","The active NorCal track roster and the 2026 series schedule."],
@@ -682,7 +924,12 @@ DATA.sources = [
 ];
 
 /* ==========================================================================
-   CHART ENGINE
+   CHART ENGINE — hand-rolled SVG. No dependencies.
+   Chart.xy()    line / band / scatter over a numeric x axis
+   Chart.bars()  horizontal category bars
+   Chart.gantt() parallel time spans
+   Each returns an SVG string. Colors come from CSS variables so charts
+   restyle themselves automatically when the theme changes.
    ========================================================================== */
 const Chart = (() => {
   const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -697,18 +944,21 @@ const Chart = (() => {
     const Y = v => m.t + ih - (v-yMin)/(yMax-yMin)*ih;
     let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||"chart")}">`;
 
+    // horizontal gridlines + y labels
     const ticks = o.yTicks||5;
     for(let i=0;i<=ticks;i++){
       const val = yMin + (yMax-yMin)*i/ticks, y=Y(val);
       s += `<line x1="${m.l}" y1="${n(y)}" x2="${W-m.r}" y2="${n(y)}" stroke="var(--grid)" stroke-width="1"/>`;
       s += `<text x="${m.l-8}" y="${n(y)+4}" text-anchor="end" font-size="10" font-family="var(--font-mono)" fill="var(--text-faint)">${o.yFmt?o.yFmt(val):Math.round(val)}</text>`;
     }
+    // x labels
     (o.xTicks||[]).forEach(t=>{
       const x=X(t);
       s += `<line x1="${n(x)}" y1="${m.t}" x2="${n(x)}" y2="${m.t+ih}" stroke="var(--grid)" stroke-width="1"/>`;
       s += `<text x="${n(x)}" y="${m.t+ih+16}" text-anchor="middle" font-size="10" font-family="var(--font-mono)" fill="var(--text-faint)">${esc(t)}</text>`;
     });
 
+    // event annotations (vertical dashed markers)
     (o.events||[]).forEach((ev,i)=>{
       const x=X(ev.year);
       s += `<line x1="${n(x)}" y1="${m.t}" x2="${n(x)}" y2="${m.t+ih}" stroke="var(--accent-2)" stroke-width="1" stroke-dasharray="3 3" opacity=".55"/>`;
@@ -716,6 +966,7 @@ const Chart = (() => {
       s += `<text x="${n(x)}" y="${m.t-2.5}" text-anchor="middle" font-size="9" font-weight="700" font-family="var(--font-mono)" fill="var(--bg)">${i+1}</text>`;
     });
 
+    // uncertainty band
     if(o.band){
       const up = o.band.map(p=>`${n(X(p.x))},${n(Y(p.hi))}`).join(" ");
       const dn = o.band.slice().reverse().map(p=>`${n(X(p.x))},${n(Y(p.lo))}`).join(" ");
@@ -724,6 +975,7 @@ const Chart = (() => {
       s += `<polyline points="${o.band.map(p=>`${n(X(p.x))},${n(Y(p.lo))}`).join(" ")}" fill="none" stroke="${o.bandColor||"var(--accent)"}" stroke-width="1" opacity=".4" stroke-dasharray="4 3"/>`;
     }
 
+    // series
     (o.series||[]).forEach(ser=>{
       const pts = ser.points.map(p=>`${n(X(p.x))},${n(Y(p.y))}`).join(" ");
       if(ser.fill){
@@ -737,7 +989,9 @@ const Chart = (() => {
         });
       }
     });
-    s += `</svg>`; return s;
+
+    s += `</svg>`;
+    return s;
   }
 
   function bars(o){
@@ -759,26 +1013,6 @@ const Chart = (() => {
     });
     s+=`</svg>`; return s;
   }
-  
-  function histogram(o) {
-      const cols=o.cols, labelH=24, barW=o.barW||40, gap=o.gap||12;
-      const maxVal = Math.max(...cols.map(c=>c.v), 1);
-      const W=o.width||760, H=o.height||200;
-      const chartH = H - labelH;
-      const totalW = cols.length * (barW + gap) - gap;
-      const startX = (W - totalW) / 2; // center chart
-
-      let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||"histogram")}">`;
-      cols.forEach((col, i) => {
-          const x = startX + i * (barW + gap);
-          const barH = (col.v / maxVal) * (chartH - 25);
-          const y = chartH - barH;
-          s+=`<rect x="${n(x)}" y="${n(y)}" width="${barW}" height="${n(barH)}" fill="var(--accent)" opacity="0.85"><title>${col.label}: ${col.v} tracks</title></rect>`;
-          s+=`<text x="${n(x + barW/2)}" y="${n(y - 6)}" text-anchor="middle" font-size="11" font-weight="700" font-family="var(--font-mono)" fill="var(--text)">${col.v}</text>`;
-          s+=`<text x="${n(x + barW/2)}" y="${H - 4}" text-anchor="middle" font-size="12" font-family="var(--font-mono)" fill="var(--text-dim)">${esc(col.label)}</text>`;
-      });
-      s+=`</svg>`; return s;
-  }
 
   function gantt(o){
     const items=o.items, rowH=o.rowH||42, labelW=o.labelW||96;
@@ -786,6 +1020,7 @@ const Chart = (() => {
     const x0=labelW, iw=W-labelW-16;
     const X = y => x0 + (y-o.minYear)/(o.maxYear-o.minYear)*iw;
     let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||"timeline")}">`;
+    // decade gridlines
     for(let y=Math.ceil(o.minYear/10)*10; y<=o.maxYear; y+=10){
       s+=`<line x1="${n(X(y))}" y1="0" x2="${n(X(y))}" y2="${items.length*rowH}" stroke="var(--grid)" stroke-width="1"/>`;
       s+=`<text x="${n(X(y))}" y="${items.length*rowH+18}" text-anchor="middle" font-size="10" font-family="var(--font-mono)" fill="var(--text-faint)">${y}</text>`;
@@ -796,6 +1031,7 @@ const Chart = (() => {
       const xa=X(it.start), xb=X(end);
       s+=`<text x="0" y="${y+bh*0.72}" font-size="12.5" font-weight="700" font-family="var(--font-display)" fill="var(--text)" letter-spacing=".04em">${esc(it.abbr)}</text>`;
       s+=`<rect x="${n(xa)}" y="${y}" width="${n(Math.max(xb-xa,3))}" height="${bh}" rx="2" fill="${it.color}" opacity=".9"><title>${esc(it.abbr+" — "+it.name+" ("+it.start+"–"+(it.end??"present")+")")}</title></rect>`;
+      // open-ended marker
       if(it.end===null){
         s+=`<polygon points="${n(xb)},${y} ${n(xb+9)},${y+bh/2} ${n(xb)},${y+bh}" fill="${it.color}"/>`;
       }
@@ -805,7 +1041,7 @@ const Chart = (() => {
     s+=`</svg>`; return s;
   }
 
-  return {xy,bars,histogram,gantt,esc};
+  return {xy,bars,gantt,esc};
 })();
 
 /* ==========================================================================
@@ -815,15 +1051,17 @@ const $  = (s,el)=> (el||document).querySelector(s);
 const $$ = (s,el)=> Array.from((el||document).querySelectorAll(s));
 const esc = Chart.esc;
 const isClosed = t => t.s === "closed";
-const isRacing = t => STATUS[t.s]?.racing === true;
+const isRacing = t => STATUS[t.s]?.racing === true;   // confirmed holding races now
 const flagsOf  = t => Object.keys(FLAGS).filter(k => t[k] === true);
-
+/* Marker/badge opacity carries confidence: the fainter it is, the thinner
+   the evidence. One rule, applied everywhere. */
 const CONF_ALPHA = {verified:1, estimated:0.72, draft:0.45};
 const confAlpha = t => CONF_ALPHA[t.conf] ?? 1;
 const regionLabel = k => DATA.regions[k]?.label || k;
 
 function statusColor(k){ return STATUS[k]?.color || "var(--text-dim)"; }
 
+/* Marker geometry — one shape per status, nothing else. */
 function markerPath(shape,x,y,c){
   switch(shape){
     case "dot":     return `<circle cx="${x}" cy="${y}" r="5" fill="${c}" stroke="var(--bg)" stroke-width="1.2"/>`;
@@ -834,6 +1072,8 @@ function markerPath(shape,x,y,c){
   }
 }
 
+/* Flag decoration — drawn *around* the status marker, never instead of it.
+   A track keeps its status shape and gains a ring or a star. */
 function flagPath(flag,x,y){
   if(flag==="national")  return `<circle cx="${x}" cy="${y}" r="9.5" fill="none" stroke="var(--accent)" stroke-width="1.5" opacity=".8"/>`;
   if(flag==="birthplace"){
@@ -856,8 +1096,8 @@ function applyTheme(key){
   $$(".theme-btn").forEach(b=> b.setAttribute("aria-pressed", String(b.dataset.theme===key)));
   const nameEl = $("#themeName");
   if(nameEl) nameEl.textContent = t.label;
-  try{ localStorage.setItem(CONFIG.site.storageKey,key); }catch(e){}
-  if(state.activeTab) renderTab(state.activeTab); 
+  try{ localStorage.setItem(CONFIG.site.storageKey,key); }catch(e){/* storage unavailable — theme just won't persist */}
+  if(state.activeTab) renderTab(state.activeTab); // charts re-read CSS vars
 }
 function buildThemeSwitch(){
   $("#themeSwitch").innerHTML =
@@ -874,16 +1114,7 @@ function buildThemeSwitch(){
 /* ==========================================================================
    STATE
    ========================================================================== */
-const state = { 
-    activeTab:"overview", 
-    q:"", 
-    region:"all", 
-    status:"all", 
-    conf:"all", 
-    flag:"all", 
-    sort:{key:"n",dir:1},
-    mapZoom: {x: 0, y: 0, w: CONFIG.map.width, h: CONFIG.map.height} // Added Map State
-};
+const state = { activeTab:"overview", q:"", region:"all", status:"all", conf:"all", flag:"all", sort:{key:"n",dir:1} };
 
 function filteredTracks(){
   const q = state.q.trim().toLowerCase();
@@ -909,7 +1140,7 @@ function filteredTracks(){
 }
 
 /* ==========================================================================
-   TABS 
+   TABS — add an entry here to add a tab. `render` returns an HTML string.
    ========================================================================== */
 const TABS = [
   {id:"overview",  label:"Overview",        render:renderOverview},
@@ -921,6 +1152,7 @@ const TABS = [
   {id:"method",    label:"Method & Sources",render:renderMethod}
 ];
 
+/* ---------- TAB 1: OVERVIEW ---------- */
 function renderOverview(){
   const all = DATA.tracks;
   const racing = all.filter(isRacing);
@@ -938,11 +1170,12 @@ function renderOverview(){
     {v:"57yr", l:"Span, 1969–2026"}
   ].map(p=>`<div class="plate${p.accent?" is-accent":""}"><b>${esc(p.v)}</b><span>${esc(p.l)}</span></div>`).join("");
 
+  // Region bars: the three real states of a track
   const rows = Object.keys(DATA.regions).map(k=>{
     const inR = all.filter(t=>t.r===k);
     return {label:regionLabel(k), segments:[
       {label:"Active", v:inR.filter(isRacing).length, color:"var(--ok)", opacity:.85},
-      {label:"Unconfirmed", v:inR.filter(t=>t.s==="unconfirmed"||t.s==="building").length, color:"var(--warn)", opacity:.75},
+      {label:"Unconfirmed or rebuilding", v:inR.filter(t=>t.s==="unconfirmed"||t.s==="building").length, color:"var(--warn)", opacity:.75},
       {label:"Closed", v:inR.filter(isClosed).length, color:"var(--bad)", opacity:.6}
     ]};
   }).sort((a,b)=> b.segments.reduce((s,x)=>s+x.v,0)-a.segments.reduce((s,x)=>s+x.v,0));
@@ -974,6 +1207,10 @@ function renderOverview(){
     <p class="sec-note">Every track sits in exactly one of these. They all answer the same question:
       <strong>could you go and ride there?</strong></p>
     <div class="statdefs">${statusKey}</div>
+    <p class="sec-note" style="margin-top:12px">Two further labels are <em>not</em> statuses, because they
+      don't answer that question — they're marks a track can carry on top of its status.
+      <span class="badge">NAT</span> means it hosts a USA BMX national event.
+      <span class="badge">1969</span> marks the birthplace of the sport, which is also Closed.</p>
   </div>
 
   <div class="callout">
@@ -990,7 +1227,7 @@ function renderOverview(){
       ${Chart.bars({rows,labelW:200,aria:"Tracks by California region"})}
       <div class="legend-inline">
         <span><i class="dot" style="background:var(--ok)"></i>Active</span>
-        <span><i class="dot" style="background:var(--warn)"></i>Unconfirmed</span>
+        <span><i class="dot" style="background:var(--warn)"></i>Unconfirmed or rebuilding</span>
         <span><i class="dot" style="background:var(--bad)"></i>Closed</span>
       </div>
     </div>
@@ -998,15 +1235,22 @@ function renderOverview(){
       <h3>Records by confidence</h3>
       <div class="sub">How well sourced each record is</div>
       ${Chart.bars({rows:confRows,labelW:110,rowH:38,aria:"Records by confidence tier"})}
+      <p class="sec-note" style="margin-top:10px;font-size:12.5px">
+        The draft tier is large because most closed tracks survive only in rider memory.
+        That is worth recording — but it is not the same kind of fact as a published race schedule.
+      </p>
     </div>
   </div>
 
   <div class="sec" style="margin-top:22px">
     <div class="sec-head"><h2>The arc</h2><span class="rule"></span></div>
+    <p class="sec-note">Estimated number of BMX tracks operating in California. The band is the plausible
+      range; the ringed point at 2010 is the one directly counted year. See the Growth tab for methodology.</p>
     <div class="chart-card">${spark}</div>
   </div>`;
 }
 
+/* ---------- TAB 2: MAP ---------- */
 function project(lat,lon,map,W,H,pad){
   const b=map.bounds;
   const k=Math.cos(((b.latMin+b.latMax)/2)*Math.PI/180);
@@ -1029,6 +1273,7 @@ function renderMap(){
             <text x="${(x+6).toFixed(1)}" y="${(y+3.5).toFixed(1)}" font-size="10" font-family="var(--font-mono)" fill="var(--text-faint)" opacity=".85">${esc(c.name)}</text>`;
   }).join("");
 
+  // Draw closed first so active markers sit on top
   const order = t => isClosed(t) ? 0 : 1;
   const markers = DATA.tracks.slice().sort((a,b)=>order(a)-order(b)).map(t=>{
     const [x,y]=project(t.lat,t.lon,map,W,H,pad);
@@ -1054,18 +1299,16 @@ function renderMap(){
 
   return `
   <div class="sec-head"><h2>Where they are</h2><span class="rule"></span></div>
-  <p class="sec-note">Pan and zoom to explore the atlas. The filters here drive the Directory tab too.</p>
+  <p class="sec-note">Every track in the atlas, plotted. Shape shows status; a ring or star marks a notable
+    track; and <strong>the fainter a marker, the thinner the evidence behind it</strong> — opacity follows the
+    confidence tier. Hover or tap for detail. Coordinates are city-level approximations for placement, not
+    navigation. The filters here drive the Directory tab too.</p>
 
   ${controlsHTML()}
   <p class="result-count" id="mapCount"></p>
 
-  <div class="map-shell" id="mapWrapper">
-    <div class="map-controls">
-        <button class="map-ctrl-btn" id="btnZoomIn" title="Zoom In" aria-label="Zoom In">+</button>
-        <button class="map-ctrl-btn" id="btnZoomOut" title="Zoom Out" aria-label="Zoom Out">−</button>
-        <button class="map-ctrl-btn" id="btnZoomReset" title="Reset Map" aria-label="Reset Map" style="font-size:12px">⟲</button>
-    </div>
-    <svg id="mapSvg" viewBox="${state.mapZoom.x} ${state.mapZoom.y} ${state.mapZoom.w} ${state.mapZoom.h}" role="img" aria-label="Map of BMX tracks in California">
+  <div class="map-shell">
+    <svg id="mapSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map of BMX tracks in California">
       <path class="state-land" d="${path}"/>
       ${cities}
       ${markers}
@@ -1076,9 +1319,16 @@ function renderMap(){
     ${legend}
     <span style="width:1px;height:20px;background:var(--line);padding:0"></span>
     ${flagLegend}
+    <span style="width:1px;height:20px;background:var(--line);padding:0"></span>
+    <span><svg width="46" height="16" viewBox="0 0 46 16" aria-hidden="true">
+      <circle cx="8"  cy="8" r="5" fill="var(--text-dim)" opacity="1"/>
+      <circle cx="23" cy="8" r="5" fill="var(--text-dim)" opacity=".72"/>
+      <circle cx="38" cy="8" r="5" fill="var(--text-dim)" opacity=".45"/>
+    </svg>Verified → estimated → draft</span>
   </div>`;
 }
 
+/* ---------- TAB 3: DIRECTORY ---------- */
 function controlsHTML(){
   const regionOpts = Object.entries(DATA.regions).map(([k,v])=>
     `<option value="${k}"${state.region===k?" selected":""}>${esc(v.label)}</option>`).join("");
@@ -1091,7 +1341,7 @@ function controlsHTML(){
   return `
   <div class="controls">
     <div class="search-wrap">
-      <input type="search" id="q" placeholder="Search tracks, cities…" value="${esc(state.q)}" aria-label="Search tracks">
+      <input type="search" id="q" placeholder="Search tracks, cities, counties, sanctions…" value="${esc(state.q)}" aria-label="Search tracks">
     </div>
     <select id="fRegion" aria-label="Filter by region">
       <option value="all">All regions</option>${regionOpts}
@@ -1111,14 +1361,16 @@ function controlsHTML(){
 
 function tableRows(list){
   if(!list.length){
-    return `<tr><td colspan="8"><div class="empty"><b>No tracks match</b>
-      Try a broader search, or clear the filters.</div></td></tr>`;
+    return `<tr><td colspan="7"><div class="empty"><b>No tracks match</b>
+      Try a broader search, or clear the filters to see all ${DATA.tracks.length} records.</div></td></tr>`;
   }
   return list.map(t=>{
     const st=STATUS[t.s];
-    const originalIndex = DATA.tracks.indexOf(t);
-    const name = t.w ? `<a href="${esc(t.w)}" target="_blank" rel="noopener noreferrer">${esc(t.n)}</a>` : esc(t.n);
-    const badges = flagsOf(t).map(f=>`<span class="badge" title="${esc(FLAGS[f].note)}">${esc(FLAGS[f].short)}</span>`).join("");
+    const name = t.w
+      ? `<a href="${esc(t.w)}" target="_blank" rel="noopener noreferrer">${esc(t.n)}</a>`
+      : esc(t.n);
+    const badges = flagsOf(t).map(f=>
+      `<span class="badge" title="${esc(FLAGS[f].note)}">${esc(FLAGS[f].short)}</span>`).join("");
     return `<tr>
       <td class="t-name">${name} ${badges}${t.d?`<span class="t-sub district">${esc(t.d)}</span>`:""}</td>
       <td>${esc(t.c)}<span class="t-sub">${esc(t.co)} County</span></td>
@@ -1127,20 +1379,21 @@ function tableRows(list){
       <td>${esc(t.f)}</td>
       <td>${esc(t.sanction)}</td>
       <td><span class="chip ${t.conf}">${esc(CONF[t.conf].label)}</span>${t.note?`<span class="t-sub">${t.note}</span>`:""}</td>
-      <td style="text-align:right"><button class="btn-locate" data-index="${originalIndex}">📍 Map</button></td>
     </tr>`;
   }).join("");
 }
 
 function renderDirectory(){
-  const cols=[["n","Track"],["c","City"],["r","Region"],["s","Status"],["f","Founded"],["sanction","Sanction"],["conf","Confidence"], ["", ""]];
+  const cols=[["n","Track"],["c","City"],["r","Region"],["s","Status"],["f","Founded"],["sanction","Sanction"],["conf","Confidence & notes"]];
   const head = cols.map(([k,l])=>{
     const arw = state.sort.key===k ? (state.sort.dir>0?"▲":"▼") : "";
-    return k ? `<th data-sort="${k}">${esc(l)}<span class="arw">${arw}</span></th>` : `<th></th>`;
+    return `<th data-sort="${k}">${esc(l)}<span class="arw">${arw}</span></th>`;
   }).join("");
   return `
   <div class="sec-head"><h2>Track directory</h2><span class="rule"></span></div>
-  <p class="sec-note">Every record, searchable and sortable. Use the Map button to jump to a specific location.</p>
+  <p class="sec-note">Every record, searchable and sortable. Click a column heading to sort.
+    Track names link out where a working site is known. Codes like <span class="mono">CA26</span>
+    are the ABA district numbers each California track raced under.</p>
   ${controlsHTML()}
   <p class="result-count" id="dirCount"></p>
   <div class="tbl-scroll">
@@ -1148,17 +1401,7 @@ function renderDirectory(){
   </div>`;
 }
 
-function processDecadesData() {
-    let decades = { "1960s": 0, "1970s": 0, "1980s": 0, "1990s": 0, "2000s": 0, "2010s": 0 };
-    DATA.tracks.forEach(t => {
-        if(t.fy) {
-            let decadeKey = Math.floor(t.fy / 10) * 10 + "s";
-            if(decades[decadeKey] !== undefined) decades[decadeKey]++;
-        }
-    });
-    return Object.keys(decades).map(k => ({ label: k, v: decades[k] }));
-}
-
+/* ---------- TAB 4: GROWTH ---------- */
 function renderGrowth(){
   const g=DATA.growth;
   const chart = Chart.xy({
@@ -1166,10 +1409,9 @@ function renderGrowth(){
     xMin:1970,xMax:2025,yMin:0,yMax:95,yTicks:5,
     xTicks:[1970,1975,1980,1985,1990,1995,2000,2005,2010,2015,2020,2025],
     band:g.map(d=>({x:d.year,lo:d.low,hi:d.high})),
-    series:[{color:"var(--accent)",points:g.map(d=>({x:d.year,y:d.mid,anchor:d.conf==="verified"}))}]
+    series:[{color:"var(--accent)",points:g.map(d=>({x:d.year,y:d.mid,anchor:d.conf==="verified",
+      title:`${d.year}: ~${d.mid} tracks (range ${d.low}–${d.high})`}))}]
   });
-
-  const histogramChart = Chart.histogram({ cols: processDecadesData(), width: 760, height: 180 });
 
   const rows = g.map(d=>`<tr>
     <td class="mono t-name">${d.year}</td>
@@ -1180,21 +1422,25 @@ function renderGrowth(){
 
   return `
   <div class="sec-head"><h2>Rise and fall</h2><span class="rule"></span></div>
-  <p class="sec-note">The estimated number of BMX tracks operating in California over time.</p>
+  <p class="sec-note">The number of BMX tracks operating in California, in five-year steps.
+    <strong>These are estimates, not a census.</strong> The shaded band is the plausible range and the
+    line is the working midpoint. Only one year — 2010 — is a direct count, marked with a ring.</p>
+
   <div class="chart-card">
     ${chart}
     <div class="legend-inline">
       <span><i class="dot" style="background:var(--accent)"></i>Working midpoint</span>
       <span><svg width="20" height="12" aria-hidden="true"><rect width="20" height="12" fill="var(--accent)" opacity=".16"/></svg>Plausible range</span>
+      <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="var(--bg)" stroke="var(--accent)" stroke-width="2.5"/></svg>Directly counted</span>
     </div>
   </div>
 
-  <div class="sec" style="margin-top:26px">
-    <div class="sec-head"><h2>The Boom Years</h2><span class="rule"></span></div>
-    <p class="sec-note">When tracks were established. The 1970s and 1980s represent the massive infrastructure build-out of the sport's golden era. (Includes only tracks with a known founding year).</p>
-    <div class="chart-card">
-        ${histogramChart}
-    </div>
+  <div class="callout" style="margin-top:20px">
+    <b>Why the shape matters.</b> The peak was the late 1970s and early 1980s, when four sanctioning bodies
+    were signing up California tracks at once. The decline since 2010 is not mainly about interest — it tracks
+    land cost, insurance, and municipal lease decisions. Chula Vista closed because rent and maintenance
+    outran the gate. Silver Dollar lost a 30-year free lease to a housing site. Orange Y died in a lease dispute
+    and the land was sold. Three closures, three land-use decisions.
   </div>
 
   <div class="sec" style="margin-top:26px">
@@ -1207,9 +1453,11 @@ function renderGrowth(){
   </div>`;
 }
 
+/* ---------- TAB 5: SANCTIONING BODIES ---------- */
 function renderSanctions(){
   const items=DATA.leagues.slice().sort((a,b)=>a.start-b.start);
-  const chart = Chart.gantt({items,minYear:1968,maxYear:2030,width:760,rowH:44,labelW:96});
+  const chart = Chart.gantt({items,minYear:1968,maxYear:2030,width:760,rowH:44,labelW:96,
+    aria:"Timeline of BMX sanctioning bodies showing overlapping years of operation"});
 
   const cards = items.map(l=>`
     <div class="card" style="border-left:4px solid ${l.color}">
@@ -1225,36 +1473,69 @@ function renderSanctions(){
 
   return `
   <div class="sec-head"><h2>Who sanctioned the racing</h2><span class="rule"></span></div>
+  <p class="sec-note">BMX spent most of its life with two or more governing bodies competing for the same tracks
+    and riders — the "sanction wars." A California track in 1980 could pick between four. Today there is one.</p>
+
   <div class="chart-card">${chart}</div>
+
+  <div class="callout">
+    <b>Read the overlaps.</b> Between 1977 and 1981 four sanctions ran at once, and that crowding is the single
+    best explanation for the track-count peak in the growth chart: rival bodies were each recruiting venues.
+    The 2011 merger of the ABA and NBL ended a 37-year split and left USA BMX alone in the field.
+  </div>
+
   <div class="grid2" style="margin-top:20px">${cards}</div>`;
 }
 
+/* ---------- TAB 6: SEARCH INTEREST ---------- */
 function renderInterest(){
   const s=DATA.trends.series;
   const chart = Chart.xy({
-    width:760,height:360,xMin:2004,xMax:2026,yMin:0,yMax:80,yTicks:4,mt:26,
-    xTicks:[2005,2010,2015,2020,2025], events:DATA.trends.events,
-    series:[{color:"var(--accent-3)",fill:true,points:s.map(d=>({x:d.year,y:d.v}))}]
+    width:760,height:360,aria:"Google search interest in BMX in the United States, 2004 to 2026",
+    xMin:2004,xMax:2026,yMin:0,yMax:80,yTicks:4,mt:26,
+    xTicks:[2005,2010,2015,2020,2025],
+    events:DATA.trends.events,
+    series:[{color:"var(--accent-3)",fill:true,points:s.map(d=>({x:d.year,y:d.v,title:`${d.year}: index ${d.v}`}))}]
   });
   const key = DATA.trends.events.map((e,i)=>
     `<span><b class="mono" style="color:var(--accent-2)">${i+1}</b> ${e.year} — ${esc(e.label)}</span>`).join("");
 
   const first=s[0].v, last=s[s.length-1].v;
+  const drop = Math.round((1-last/first)*100);
   const peak = s.reduce((a,b)=>b.v>a.v?b:a);
 
   return `
   <div class="sec-head"><h2>Public attention</h2><span class="rule"></span></div>
-  <p class="sec-note">United States Google search interest in the term <strong>“BMX”</strong>.</p>
+  <p class="sec-note">United States Google search interest in the term <strong>“BMX”</strong>, 2004 to present.
+    Google reports this as a relative index where 100 is the single busiest month in the window —
+    a month in 2008, when BMX debuted as an Olympic medal sport. The values below are annual averages.</p>
+
   <div class="plates" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
     <div class="plate is-accent"><b>${peak.v}</b><span>Peak annual avg · ${peak.year}</span></div>
     <div class="plate"><b>${last}</b><span>Latest annual avg</span></div>
+    <div class="plate"><b>−${drop}%</b><span>Change since 2004</span></div>
   </div>
+
   <div class="chart-card">
     ${chart}
     <div class="legend-inline" style="margin-top:14px">${key}</div>
-  </div>`;
+  </div>
+
+  <div class="callout">
+    <b>Attention and infrastructure moved together — but not perfectly.</b> Search interest holds up through
+    2012 and only steps down sharply after 2013, while the track count was already falling. The Olympic bumps
+    in 2008, 2016 and 2021 are real but short: each one fades within a year or two and none of them reverses
+    the trend. Whatever keeps a track open, a medal ceremony is not enough on its own.
+  </div>
+
+  <p class="sec-note" style="font-size:12.5px">
+    <strong>Caveat:</strong> ${esc(DATA.trends.scaleNote)} These figures were digitized by eye from a screenshot,
+    so read the shape rather than the exact numbers. The term “BMX” also covers freestyle, bikes and apparel —
+    it is not a measure of racing participation.
+  </p>`;
 }
 
+/* ---------- TAB 7: METHOD & SOURCES ---------- */
 function renderMethod(){
   const tiers = Object.entries(CONF).map(([k,v])=>{
     const count = DATA.tracks.filter(t=>t.conf===k).length;
@@ -1271,15 +1552,52 @@ function renderMethod(){
 
   return `
   <div class="sec-head"><h2>How this was built</h2><span class="rule"></span></div>
+  <p class="sec-note">This atlas is a first-pass compilation, not a registry. California has had well over
+    three hundred BMX tracks come and go since 1969 and most left almost no durable record — a phone number in
+    a directory, a forum post, nothing else. What follows is what could be sourced, labelled by how well.</p>
+
   <div class="grid2">${tiers}</div>
+
+  <div class="callout" style="margin-top:22px">
+    <b>Two known gaps, in opposite directions.</b> For tracks that may still operate, about thirty records
+    come from a single archived statewide directory dated around 2010–11. Those tracks existed then; whether
+    they exist now would take a track-by-track check against current schedules. For closed tracks, most of the
+    historic roster comes from rider-recollection forum threads — a genuinely valuable record, since almost
+    nothing else survives, but one where riders openly correct each other's dates and locations mid-thread.
+    Treat a Draft entry as evidence that a track existed, not as an authority on where or when.
+  </div>
+
+  <div class="callout" style="border-left-color:var(--warn)">
+    <b>A worked example of why the tiers matter.</b> A widely repeated forum list places High Desert BMX in
+    Barstow. Another rider, further down the same thread, corrects it: the track was his local, and it was in
+    Hesperia. This atlas follows the correction and folds it into the active Hesperia record — but the original
+    error had already been copied around for years. That is the Draft tier in one story.
+  </div>
+
   <div class="sec" style="margin-top:26px">
+    <div class="sec-head"><h2>Scope</h2><span class="rule"></span></div>
+    <p class="sec-note">This covers sanctioned BMX <strong>race</strong> tracks — a start hill, a gate, berms and
+      a scored moto. Pump tracks, dirt-jump parks and concrete BMX-friendly skateparks are a related but different
+      category and are deliberately excluded, though several California cities have replaced a lost race track
+      with exactly those facilities.</p>
+  </div>
+
+  <div class="sec">
     <div class="sec-head"><h2>Sources</h2><span class="rule"></span></div>
     <ul class="src-list">${src}</ul>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><h2>Extending this file</h2><span class="rule"></span></div>
+    <p class="sec-note">The data and the rendering are kept apart on purpose. Open the file and look for the
+      <span class="mono">CONFIG</span> and <span class="mono">DATA</span> blocks near the top of the script —
+      adding a track, a region, a color scheme, a chart or a whole additional state is an edit to those objects,
+      not to the rendering code. Each block carries a comment explaining what to change.</p>
   </div>`;
 }
 
 /* ==========================================================================
-   INTERACTIVITY & DOM PLUMBING
+   TAB PLUMBING
    ========================================================================== */
 function buildTabs(){
   $("#tabBar").innerHTML = TABS.map((t,i)=>
@@ -1304,7 +1622,10 @@ function renderTab(id){
 
 function wireControls(){
   const q=$("#q");
-  if(q){ q.addEventListener("input", e=>{ state.q=e.target.value; refreshFiltered(); }); }
+  if(q){
+    q.addEventListener("input", e=>{ state.q=e.target.value; refreshFiltered(); });
+    // keep focus + caret when re-rendering isn't needed
+  }
   const bind=(sel,key)=>{ const el=$(sel); if(el) el.addEventListener("change",e=>{ state[key]=e.target.value; refreshFiltered(); }); };
   bind("#fRegion","region"); bind("#fStatus","status"); bind("#fConf","conf"); bind("#fFlag","flag");
   const c=$("#btnClear");
@@ -1317,10 +1638,7 @@ function wireControls(){
 function refreshFiltered(){
   const list=filteredTracks();
   const body=$("#dirBody");
-  if(body) {
-      body.innerHTML=tableRows(list);
-      wireTable(); // re-wire locator buttons
-  }
+  if(body) body.innerHTML=tableRows(list);
   const keep=new Set(list.map(t=>DATA.tracks.indexOf(t)));
   $$("#mapSvg .mk").forEach(g=> g.classList.toggle("dim", !keep.has(+g.dataset.i)));
   updateCounts(list);
@@ -1339,46 +1657,16 @@ function wireTable(){
     state.sort = (state.sort.key===k) ? {key:k,dir:-state.sort.dir} : {key:k,dir:1};
     renderTab("directory");
   }));
-  
-  // Wire Map Jumpers
-  $$(".btn-locate").forEach(btn => btn.addEventListener("click", (e) => {
-      const idx = +e.target.dataset.index;
-      focusTrackOnMap(idx);
-  }));
-}
-
-function focusTrackOnMap(idx) {
-    const t = DATA.tracks[idx];
-    const mapConf = CONFIG.map;
-    const [x,y] = project(t.lat, t.lon, MAPS.California, mapConf.width, mapConf.height, mapConf.padding);
-    
-    // Zoom in heavily on the target coordinate
-    const zoomW = mapConf.width * 0.3;
-    const zoomH = mapConf.height * 0.3;
-    state.mapZoom = { x: x - zoomW/2, y: y - zoomH/2, w: zoomW, h: zoomH };
-    
-    // Switch to Map Tab
-    renderTab("map");
-    if(history.replaceState) history.replaceState(null,"","#map");
-    
-    // Trigger tooltip artificially after brief delay
-    setTimeout(() => {
-        const targetMarker = $(`#mapSvg .mk[data-i="${idx}"]`);
-        if(targetMarker) {
-            targetMarker.dispatchEvent(new MouseEvent('mouseenter'));
-        }
-    }, 50);
 }
 
 function wireMap(){
-  const tip=$("#mapTip"), shell=$(".map-shell"), svg=$("#mapSvg");
-  
-  // Interactive Tooltips
-  const show=(g)=>{
+  const tip=$("#mapTip"), shell=$(".map-shell");
+  const show=(g,evt)=>{
     const t=DATA.tracks[+g.dataset.i], st=STATUS[t.s];
     tip.innerHTML = `<b>${esc(t.n)}</b>
       <i>${esc(t.c)} · ${esc(t.co)} County</i>
-      <i style="color:${statusColor(t.s)};margin-top:4px">${esc(st.label)}${t.f&&t.f!=="Unknown"?" · "+esc(t.f):""}</i>`;
+      <i style="color:${statusColor(t.s)};margin-top:4px">${esc(st.label)}${t.f&&t.f!=="Unknown"?" · "+esc(t.f):""}</i>
+      ${t.note?`<i style="margin-top:5px">${t.note.length>150?t.note.slice(0,150)+"…":t.note}</i>`:""}`;
     const r=shell.getBoundingClientRect();
     const bb=g.getBoundingClientRect();
     const x=bb.left-r.left+bb.width/2, y=bb.top-r.top;
@@ -1389,62 +1677,17 @@ function wireMap(){
   const hide=()=> tip.style.opacity="0";
   $$("#mapSvg .mk").forEach(g=>{
     g.addEventListener("mouseenter",()=>show(g));
+    g.addEventListener("focus",()=>show(g));
     g.addEventListener("mouseleave",hide);
+    g.addEventListener("blur",hide);
+    g.addEventListener("click",()=>show(g));
   });
-  
-  // Map Pan/Zoom Logic
-  let isDragging = false, startMouse = {x:0, y:0}, startVB = {x:0, y:0};
-  
-  const applyViewBox = () => {
-    svg.setAttribute('viewBox', `${state.mapZoom.x} ${state.mapZoom.y} ${state.mapZoom.w} ${state.mapZoom.h}`);
-  };
-
-  const zoom = (factor, originX = CONFIG.map.width/2, originY = CONFIG.map.height/2) => {
-      let mx = state.mapZoom.x + (originX/svg.clientWidth) * state.mapZoom.w;
-      let my = state.mapZoom.y + (originY/svg.clientHeight) * state.mapZoom.h;
-      state.mapZoom.w *= factor;
-      state.mapZoom.h *= factor;
-      state.mapZoom.x = mx - (originX/svg.clientWidth) * state.mapZoom.w;
-      state.mapZoom.y = my - (originY/svg.clientHeight) * state.mapZoom.h;
-      applyViewBox();
-  };
-
-  svg.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      zoom(e.deltaY > 0 ? 1.1 : 0.9, e.offsetX, e.offsetY);
-  }, {passive: false});
-
-  svg.addEventListener("mousedown", (e) => {
-      isDragging = true;
-      startMouse = {x: e.clientX, y: e.clientY};
-      startVB = {x: state.mapZoom.x, y: state.mapZoom.y};
-  });
-
-  window.addEventListener("mousemove", (e) => {
-      if(!isDragging) return;
-      let dx = (startMouse.x - e.clientX) * (state.mapZoom.w / svg.clientWidth);
-      let dy = (startMouse.y - e.clientY) * (state.mapZoom.h / svg.clientHeight);
-      state.mapZoom.x = startVB.x + dx;
-      state.mapZoom.y = startVB.y + dy;
-      applyViewBox();
-      hide(); // hide tooltip while dragging
-  });
-
-  window.addEventListener("mouseup", () => { isDragging = false; });
-
-  // Map Control Buttons
-  const zoomInBtn = $("#btnZoomIn");
-  const zoomOutBtn = $("#btnZoomOut");
-  const resetBtn = $("#btnZoomReset");
-  
-  if(zoomInBtn) zoomInBtn.addEventListener("click", () => zoom(0.8));
-  if(zoomOutBtn) zoomOutBtn.addEventListener("click", () => zoom(1.2));
-  if(resetBtn) resetBtn.addEventListener("click", () => {
-      state.mapZoom = {x: 0, y: 0, w: CONFIG.map.width, h: CONFIG.map.height};
-      applyViewBox();
-  });
+  shell.addEventListener("mouseleave",hide);
 }
 
+/* ==========================================================================
+   ORIGIN CARD
+   ========================================================================== */
 function buildOrigin(){
   const b=DATA.birthplace;
   $("#originYear").textContent=b.year;
@@ -1463,14 +1706,43 @@ function buildOrigin(){
   });
 }
 
+/* ==========================================================================
+   HERO ARTWORK
+   Pushes CONFIG.hero onto the band as CSS variables. If `image` is empty the
+   tile layer is simply never set and the band stays a plain dark panel, so a
+   missing or not-yet-committed file degrades quietly rather than breaking.
+   ========================================================================== */
+function applyHeroArt(){
+  const band = $("#heroBand"); if(!band) return;
+  const h = CONFIG.hero || {};
+  if(h.image){
+    // encodeURI protects against spaces in the filename
+    band.style.setProperty("--hero-art", `url("${encodeURI(h.image)}")`);
+  }
+  if(h.tileWidth) band.style.setProperty("--hero-tile", h.tileWidth + "px");
+  if(h.scrim != null) band.style.setProperty("--hero-scrim", String(h.scrim));
+}
+
+/* ==========================================================================
+   BOOT
+   ========================================================================== */
 function boot(){
   $("#homeLink").href = CONFIG.site.homeUrl;
-  $("#homeLink").textContent = "← PMR";
+  $("#homeLink").textContent = "← " + CONFIG.site.name.split(" ").map(w=>w[0]).join("");
+  $("#homeLink").title = "Back to " + CONFIG.site.name;
 
   const racingNow = DATA.tracks.filter(isRacing).length;
   $("#topSub").textContent = `${DATA.tracks.length} tracks · ${racingNow} confirmed racing`;
-  $("#heroSub").innerHTML = `An atlas of ${DATA.tracks.length} BMX race tracks across California...`;
+  $("#heroSub").innerHTML =
+    `An atlas of ${DATA.tracks.length} BMX race tracks across California — the ones still running, the ones
+     that closed, and the ones that came first. The sport began here in 1969 in a Los Angeles city park;
+     today just ${racingNow} tracks in the state are confirmed to be holding races.`;
+  $("#footText").innerHTML =
+    `<strong>${esc(CONFIG.site.tool)}</strong> · ${esc(CONFIG.site.name)} · compiled ${esc(CONFIG.site.compiled)}. ` +
+    `Single-file HTML, no external dependencies. Records carry individual confidence tiers — check the ` +
+    `Method &amp; Sources tab before citing. <a href="${CONFIG.site.homeUrl}">Back to ${esc(CONFIG.site.name)}</a>`;
 
+  applyHeroArt();
   buildThemeSwitch();
   buildOrigin();
   buildTabs();
