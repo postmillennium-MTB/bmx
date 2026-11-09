@@ -8,7 +8,7 @@ Single-file HTML. No build step, no external dependencies, no CDN calls. Open it
 
 ## What's in it
 
-127 tracks across 9 California regions and 39 counties, presented over seven tabs:
+128 tracks across 9 California regions and 39 counties, presented over seven tabs:
 
 | Tab | What it shows |
 |---|---|
@@ -55,7 +55,7 @@ Every record also carries a confidence tier, independent of status:
 - **Estimated** — sourced from an archived ABA/NBL statewide directory dated circa 2010–11; a real lead, not individually reconfirmed
 - **Draft** — sourced from rider recollection (forum threads) rather than a primary source; treat names and dates as approximate
 
-Currently: 21 verified, 32 estimated, 74 draft. The draft tier is large by design — most closed 1970s–80s tracks survive only in rider memory, and that's worth recording, but it's a different kind of fact than a published schedule. Marker opacity on the map follows this tier directly: the fainter a marker, the thinner the evidence behind it.
+Currently: 23 verified, 31 estimated, 74 draft. The draft tier is large by design — most closed 1970s–80s tracks survive only in rider memory, and that's worth recording, but it's a different kind of fact than a published schedule. Marker opacity on the map follows this tier directly: the fainter a marker, the thinner the evidence behind it.
 
 ---
 
@@ -111,7 +111,7 @@ Every track record looks like this:
 
 ## Sources & methodology
 
-Full source list and a worked example of why the confidence tiers matter live in the **Method & Sources** tab inside the tool itself — that's the canonical version, kept in sync with the data. Primary sources include USA BMX's live event pages, the Golden State BMX / NorCal 4-Star Series schedule, an archived ABA/NBL statewide track directory (circa 2010–11), regional newspaper coverage of specific closures and openings, Wikipedia's sanctioning-body histories, and BMXmuseum.com rider-recollection forum threads for pre-2000s tracks.
+Full source list and a worked example of why the confidence tiers matter live in the **Method & Sources** tab inside the tool itself — that's the canonical version, kept in sync with the data. Primary sources include USA BMX's live event pages and press releases, the Golden State BMX / NorCal 4-Star Series schedule, an archived ABA/NBL statewide track directory (circa 2010–11), regional newspaper coverage of specific closures and openings, Wikipedia's sanctioning-body histories, and BMXmuseum.com rider-recollection forum threads for pre-2000s tracks.
 
 This is a first-pass compilation, not a registry. California has had well over 300 BMX tracks come and go since 1969; most left almost no durable record. Roughly a third of the currently-listed tracks rest on that single 2010–11 directory and haven't been individually reconfirmed — the single highest-value next step for this dataset.
 
