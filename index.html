@@ -5,7 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BMX Tracks in California — Post Millennium Renaissance</title>
 <meta name="description" content="An interactive atlas of 128 BMX race tracks in California — active, unconfirmed and closed — from the 1969 birthplace of the sport to today.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%23141619'/><text y='72' x='50' text-anchor='middle' font-size='58' font-family='Arial Narrow,Arial' font-weight='bold' fill='%23ffd23f'>B</text></svg>">
+<meta name="theme-color" content="#222427"><!-- applyThemeVars() keeps this in step with the chosen scheme -->
+
+<!-- Icons are the PMR antler mark, relative paths because this page is served from a
+     subpath on github.io (on the main site wrapper the same links need a leading slash). -->
+<link rel="icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="canonical" href="https://postmillennium-mtb.github.io/bmx/">
+
+<!-- Link-preview tags. These are a STATIC copy of the headline numbers: crawlers and chat
+     apps don't run JavaScript, so update the "128" in the description and og/twitter
+     descriptions below whenever the track count changes. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Post Millennium Renaissance">
+<meta property="og:title" content="BMX Tracks in California — Post Millennium Renaissance">
+<meta property="og:description" content="An interactive atlas of 128 BMX race tracks in California — active, unconfirmed and closed — from the 1969 birthplace of the sport to today.">
+<meta property="og:url" content="https://postmillennium-mtb.github.io/bmx/">
+<meta property="og:image" content="https://postmillennium-mtb.github.io/bmx/apple-touch-icon.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="BMX Tracks in California — Post Millennium Renaissance">
+<meta name="twitter:description" content="An interactive atlas of 128 BMX race tracks in California — active, unconfirmed and closed — from the 1969 birthplace of the sport to today.">
+<meta name="twitter:image" content="https://postmillennium-mtb.github.io/bmx/apple-touch-icon.png">
 
 <!-- ==========================================================================
      BMX TRACKS IN CALIFORNIA — Post Millennium Renaissance
@@ -18,9 +39,9 @@
      touch the rendering code to add content.
 
        ADD A TRACK ............ push an object into DATA.tracks
-       ADD A STATE ............ add an outline to MAPS + tracks with that state
+       ADD A STATE ............ NOT YET SUPPORTED — see the note above MAPS
        ADD A COUNTY/REGION .... add a key to DATA.regions, use it on a track
-       ADD A COLOR SCHEME ..... add an object to THEMES
+       ADD A COLOR SCHEME ..... add an object to THEMES (it lives in the <head> script)
        ADD A TAB .............. add an entry to TABS with a render function
        ADD A CHART ............ call Chart.xy / Chart.bars / Chart.gantt
        EDIT GROWTH ESTIMATES .. DATA.growth
@@ -38,14 +59,17 @@
    To add a scheme, add an object to THEMES — no CSS changes required.
    ========================================================================== */
 :root{
-  --bg:#141619; --bg-alt:#1a1d22; --surface:#20242b; --surface-2:#272c34;
-  --line:#333a44; --line-soft:#2a2f37;
+  /* Colour tokens below mirror THEMES.powerlite (the default). The head script overwrites
+     them before first paint, so they only show if JavaScript is unavailable. They had
+     drifted from the real palette (darker background) — keep the two in step. */
+  --bg:#222427; --bg-alt:#282b30; --surface:#2e3239; --surface-2:#353a42;
+  --line:#414852; --line-soft:#383d45;
   --text:#f2f1ec; --text-dim:#9aa3af; --text-faint:#6b7280;
   --accent:#ffd23f; --accent-2:#e5484d; --accent-3:#4cc2ff;
   --ok:#5ec26a; --warn:#f0a33a; --bad:#e5484d; --ghost:#7c8794;
   --plate-bg:#f2f1ec; --plate-ink:#141619;
   --grid:rgba(255,255,255,.07);
-  --land:#242931; --land-line:#4a5361;
+  --land:#32373f; --land-line:#58616f;
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.28);
   --radius:3px;
 
@@ -192,9 +216,15 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 /* ==========================================================================
    5. TABS
    ========================================================================== */
+/* The tab bar sticks directly below the sticky header. --top-h is the header's real
+   height, measured by syncHeaderOffset() (it is 0 on phones, where the header scrolls
+   away instead of sticking). It used to be a hard-coded 47px / 82px, which went stale
+   when the header gained a subtitle line: the bar ended up partly hidden behind the
+   header on desktop and completely hidden on phones. */
 .tabs{
-  position:sticky;top:47px;z-index:50;background:var(--bg);
+  position:sticky;top:var(--top-h,64px);z-index:50;background:var(--bg);
   border-bottom:1px solid var(--line);margin-top:22px;
+  scroll-margin-top:var(--top-h,64px);   /* scrollIntoView lands the bar below the header, not under it */
 }
 .tabs-in{display:flex;gap:0;overflow-x:auto;max-width:1180px;margin:0 auto;padding:0 18px;scrollbar-width:thin}
 .tab{
@@ -379,10 +409,102 @@ tbody tr:last-child td{border-bottom:0}
 @media(max-width:640px){
   .hero-inner{padding:28px 0 24px}
   .plate b{font-size:34px}
-  .tabs{top:82px}
   .top-in{padding:8px 14px}
+  /* On a phone the header wraps to ~130px — about 16% of the screen. Letting it scroll away
+     (and sticking only the tab bar) hands that space back. Cost: the PMR home link and the
+     colour swatches are no longer on screen while you scroll; they are one scroll-up away. */
+  .top{position:static}
+}
+/* Touch targets: PMR standard is 40px minimum. Applies to phones and to any touch screen
+   (tablets), not just narrow windows. */
+@media(max-width:640px),(pointer:coarse){
+  .home-link{min-height:40px;display:inline-flex;align-items:center}
+  .theme-btn{width:40px;height:40px}
+  .zoom-btn,.btn-clear,select,input[type="search"]{min-height:40px}
 }
 </style>
+
+<script>
+/* ==========================================================================
+   THEME PALETTES live here, in <head>, on purpose.
+   The main script sits at the end of a ~130 KB file. On a slow connection the
+   page shell used to paint in the base palette while that script downloaded,
+   then flip to the visitor's saved scheme — a dark-to-light flash for anyone
+   who had picked Auburn. Applying the saved scheme from <head> means the first
+   paint is already in the right colours. The main script reuses THEMES,
+   DEFAULT_THEME, THEME_STORAGE_KEY and applyThemeVars() from here.
+   ========================================================================== */
+/* ==========================================================================
+   THEMES — add an object here to add a color scheme. Nothing else to change.
+   `vars` maps 1:1 onto the CSS custom properties in :root.
+   Named for three California-era BMX frame brands. Chuck Robinson, who built
+   Robinson Racing frames, appears in this atlas's own origin story — he was
+   one of the three men watching the opening of "On Any Sunday" in 1971.
+   The palettes are evocative of each brand's era, not exact brand colors.
+   NOTE: --hero-accent is the accent used over the dark hero artwork. It is
+   usually the same as --accent, but a light theme needs a brighter value
+   there or the title will not read. Set it on any theme you add.
+   ========================================================================== */
+const THEMES = {
+  powerlite:{
+    label:"Powerlite", swatch:"#ffd23f",
+    vars:{
+      "--bg":"#222427","--bg-alt":"#282b30","--surface":"#2e3239","--surface-2":"#353a42",
+      "--line":"#414852","--line-soft":"#383d45",
+      "--text":"#f2f1ec","--text-dim":"#9aa3af","--text-faint":"#6b7280",
+      "--accent":"#ffd23f","--accent-2":"#e5484d","--accent-3":"#4cc2ff","--hero-accent":"#ffd23f",
+      "--ok":"#5ec26a","--warn":"#f0a33a","--bad":"#e5484d","--ghost":"#7c8794",
+      "--plate-bg":"#f2f1ec","--plate-ink":"#141619",
+      "--grid":"rgba(255,255,255,.07)","--land":"#32373f","--land-line":"#58616f"
+    }
+  },
+  robinson:{
+    label:"Robinson", swatch:"#7dd3fc",
+    vars:{
+      "--bg":"#0b1a2a","--bg-alt":"#0f2237","--surface":"#12283f","--surface-2":"#17324c",
+      "--line":"#25496b","--line-soft":"#1c3a58",
+      "--text":"#e4eef8","--text-dim":"#93b4d0","--text-faint":"#6b8fae",
+      "--accent":"#7dd3fc","--accent-2":"#fbbf24","--accent-3":"#a5f3d0","--hero-accent":"#7dd3fc",
+      "--ok":"#5eead4","--warn":"#fbbf24","--bad":"#fb7185","--ghost":"#6b8fae",
+      "--plate-bg":"#e4eef8","--plate-ink":"#0b1a2a",
+      "--grid":"rgba(125,211,252,.13)","--land":"#143050","--land-line":"#3f7fb5"
+    }
+  },
+  auburn:{
+    label:"Auburn", swatch:"#9c3b1b",
+    vars:{
+      "--bg":"#e8ddc8","--bg-alt":"#ddd0b6","--surface":"#f3ebda","--surface-2":"#e6dbc3",
+      "--line":"#c3b193","--line-soft":"#d5c8ad",
+      "--text":"#26201a","--text-dim":"#6b5c4a","--text-faint":"#8a7a64",
+      "--accent":"#9c3b1b","--accent-2":"#4a6b2f","--accent-3":"#2f5f7d","--hero-accent":"#e8834a",
+      "--ok":"#4a6b2f","--warn":"#b07d1a","--bad":"#9c3b1b","--ghost":"#8a7a64",
+      "--plate-bg":"#26201a","--plate-ink":"#f3ebda",
+      "--grid":"rgba(38,32,26,.10)","--land":"#dbcdb0","--land-line":"#8a7a64"
+    }
+  }
+};
+
+/* Scheme used when nothing is saved (or the saved key no longer exists). If you change
+   it, also update the :root palette in the CSS (a mirror of this scheme for no-JS
+   fallback) and the <meta name="theme-color"> tag. */
+const DEFAULT_THEME = "powerlite";
+const THEME_STORAGE_KEY = "pmr-bmx-ca-theme";   // localStorage key for theme memory
+
+/* Writes a scheme's variables onto <html> and keeps the mobile browser-chrome colour in
+   step. Called here for first paint, and again by applyTheme() when a swatch is clicked. */
+function applyThemeVars(key){
+  const t = THEMES[key]; if(!t) return;
+  const root = document.documentElement;
+  Object.entries(t.vars).forEach(([k,v])=> root.style.setProperty(k,v));
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute("content", t.vars["--bg"]);
+}
+(function(){
+  let saved = null;
+  try{ saved = localStorage.getItem(THEME_STORAGE_KEY); }catch(e){/* storage blocked — default scheme */}
+  applyThemeVars(THEMES[saved] ? saved : DEFAULT_THEME);
+})();
+</script>
 </head>
 <body>
 
@@ -447,8 +569,8 @@ const CONFIG = {
     name:"Post Millennium Renaissance",
     homeUrl:"https://postmillenniumrenaissance.com/",
     tool:"BMX Tracks in California",
-    compiled:"November 2026",
-    storageKey:"pmr-bmx-ca-theme"      // localStorage key for theme memory
+    compiled:"November 2026"
+    // theme memory key: see THEME_STORAGE_KEY in the <head> script
   },
   /* ------------------------------------------------------------------
      HERO ARTWORK
@@ -475,56 +597,6 @@ const CONFIG = {
     scrim:0.78
   },
   map:{ padding:26, width:720, height:840 }
-};
-
-/* ==========================================================================
-   THEMES — add an object here to add a color scheme. Nothing else to change.
-   `vars` maps 1:1 onto the CSS custom properties in :root.
-   Named for three California-era BMX frame brands. Chuck Robinson, who built
-   Robinson Racing frames, appears in this atlas's own origin story — he was
-   one of the three men watching the opening of "On Any Sunday" in 1971.
-   The palettes are evocative of each brand's era, not exact brand colors.
-   NOTE: --hero-accent is the accent used over the dark hero artwork. It is
-   usually the same as --accent, but a light theme needs a brighter value
-   there or the title will not read. Set it on any theme you add.
-   ========================================================================== */
-const THEMES = {
-  powerlite:{
-    label:"Powerlite", swatch:"#ffd23f",
-    vars:{
-      "--bg":"#222427","--bg-alt":"#282b30","--surface":"#2e3239","--surface-2":"#353a42",
-      "--line":"#414852","--line-soft":"#383d45",
-      "--text":"#f2f1ec","--text-dim":"#9aa3af","--text-faint":"#6b7280",
-      "--accent":"#ffd23f","--accent-2":"#e5484d","--accent-3":"#4cc2ff","--hero-accent":"#ffd23f",
-      "--ok":"#5ec26a","--warn":"#f0a33a","--bad":"#e5484d","--ghost":"#7c8794",
-      "--plate-bg":"#f2f1ec","--plate-ink":"#141619",
-      "--grid":"rgba(255,255,255,.07)","--land":"#32373f","--land-line":"#58616f"
-    }
-  },
-  robinson:{
-    label:"Robinson", swatch:"#7dd3fc",
-    vars:{
-      "--bg":"#0b1a2a","--bg-alt":"#0f2237","--surface":"#12283f","--surface-2":"#17324c",
-      "--line":"#25496b","--line-soft":"#1c3a58",
-      "--text":"#e4eef8","--text-dim":"#93b4d0","--text-faint":"#6b8fae",
-      "--accent":"#7dd3fc","--accent-2":"#fbbf24","--accent-3":"#a5f3d0","--hero-accent":"#7dd3fc",
-      "--ok":"#5eead4","--warn":"#fbbf24","--bad":"#fb7185","--ghost":"#6b8fae",
-      "--plate-bg":"#e4eef8","--plate-ink":"#0b1a2a",
-      "--grid":"rgba(125,211,252,.13)","--land":"#143050","--land-line":"#3f7fb5"
-    }
-  },
-  auburn:{
-    label:"Auburn", swatch:"#9c3b1b",
-    vars:{
-      "--bg":"#e8ddc8","--bg-alt":"#ddd0b6","--surface":"#f3ebda","--surface-2":"#e6dbc3",
-      "--line":"#c3b193","--line-soft":"#d5c8ad",
-      "--text":"#26201a","--text-dim":"#6b5c4a","--text-faint":"#8a7a64",
-      "--accent":"#9c3b1b","--accent-2":"#4a6b2f","--accent-3":"#2f5f7d","--hero-accent":"#e8834a",
-      "--ok":"#4a6b2f","--warn":"#b07d1a","--bad":"#9c3b1b","--ghost":"#8a7a64",
-      "--plate-bg":"#26201a","--plate-ink":"#f3ebda",
-      "--grid":"rgba(38,32,26,.10)","--land":"#dbcdb0","--land-line":"#8a7a64"
-    }
-  }
 };
 
 /* ==========================================================================
@@ -574,8 +646,10 @@ const CONF = {
 
 /* ==========================================================================
    MAPS — state outlines as [lat, lon] rings.
-   TO ADD A STATE: add a key with `bounds` and `outline`, then add tracks whose
-   `state` matches. The projection and marker code are state-agnostic.
+   ADDING A STATE IS NOT YET A ONE-LINE EDIT. project() is state-agnostic, but
+   renderMap() and buildMiniMapSvg() read MAPS.California directly, and tracks carry no
+   `state` field. A second state needs those two functions generalised first (pick the
+   map from the track's `state`), then a key here with `bounds` and `outline`.
    ========================================================================== */
 const MAPS = {
   California:{
@@ -1141,13 +1215,16 @@ function flagPath(flag,x,y){
 /* ==========================================================================
    THEME
    ========================================================================== */
+/* THEMES, DEFAULT_THEME, THEME_STORAGE_KEY and applyThemeVars() are defined in the <head>
+   script (so the saved scheme paints on first frame). This function does the rest of a
+   scheme change: button state, the name label, saving the choice, re-drawing charts. */
 function applyTheme(key){
   const t = THEMES[key]; if(!t) return;
-  Object.entries(t.vars).forEach(([k,v])=> document.documentElement.style.setProperty(k,v));
+  applyThemeVars(key);
   $$(".theme-btn").forEach(b=> b.setAttribute("aria-pressed", String(b.dataset.theme===key)));
   const nameEl = $("#themeName");
   if(nameEl) nameEl.textContent = t.label;
-  try{ localStorage.setItem(CONFIG.site.storageKey,key); }catch(e){/* storage unavailable — theme just won't persist */}
+  try{ localStorage.setItem(THEME_STORAGE_KEY,key); }catch(e){/* storage unavailable — theme just won't persist */}
   if(state.activeTab) renderTab(state.activeTab); // charts re-read CSS vars
 }
 function buildThemeSwitch(){
@@ -1158,8 +1235,8 @@ function buildThemeSwitch(){
     ).join("");
   $$(".theme-btn").forEach(b=> b.addEventListener("click",()=>applyTheme(b.dataset.theme)));
   let saved=null;
-  try{ saved = localStorage.getItem(CONFIG.site.storageKey); }catch(e){}
-  applyTheme(THEMES[saved] ? saved : "powerlite");
+  try{ saved = localStorage.getItem(THEME_STORAGE_KEY); }catch(e){}
+  applyTheme(THEMES[saved] ? saved : DEFAULT_THEME);
 }
 
 /* ==========================================================================
@@ -1180,7 +1257,18 @@ function filteredTracks(){
       .join(" ").toLowerCase().includes(q);
   });
   const k=state.sort.key, dir=state.sort.dir;
+  const CONF_ORDER=Object.keys(CONF);   // tier rank comes from the CONF registry's order: best evidence first
   list.sort((a,b)=>{
+    // Founded: sort on the numeric `fy`, not the display text — "1970s", "c. 1980" and
+    // "Unknown" don't order meaningfully as strings. Unknown years sink to the bottom in
+    // BOTH directions so a descending sort doesn't open with 50 blanks.
+    if(k==="f"){
+      const ua=a.fy==null, ub=b.fy==null;
+      if(ua||ub) return ua===ub ? a.n.localeCompare(b.n) : (ua?1:-1);
+      return (a.fy-b.fy)*dir || a.n.localeCompare(b.n);
+    }
+    // Confidence: by tier rank (verified, estimated, draft), not alphabetically.
+    if(k==="conf") return (CONF_ORDER.indexOf(a.conf)-CONF_ORDER.indexOf(b.conf))*dir || a.n.localeCompare(b.n);
     let va,vb;
     if(k==="r"){ va=regionLabel(a.r); vb=regionLabel(b.r); }
     else if(k==="s"){ va=STATUS[a.s].label; vb=STATUS[b.s].label; }
@@ -1368,6 +1456,37 @@ function project(lat,lon,map,W,H,pad){
   return [ offX+((lon-b.lonMin)*k)*scale, offY+((b.latMax-lat))*scale ];
 }
 
+/* ---- Marker sizing on small screens ----
+   The map is an SVG with a fixed 720-unit-wide viewBox that the browser shrinks to fit its
+   container. On a 375px phone that is ~0.45px per unit, so a 5-unit dot became a 4px speck
+   with a 13px tap target. scaleMarkers() measures the real scale and grows the markers back
+   up (never below their designed size). Tradeoff: bigger dots overlap more inside the dense
+   LA and Bay Area clusters — the Bay Area / LA Basin zoom buttons are the answer to that. */
+const MARKER_HIT_R=15;            // viewBox units; invisible tap/hover target radius at 1:1 scale
+const MARKER_MAX_BODY_SCALE=2;    // cap on how far the visible dot/ring grows (1 = as drawn)
+const MARKER_MAX_HIT_SCALE=2.6;   // cap on tap-target growth; above the body cap so fingers get some slack
+let markerObserver=null;          // ResizeObserver on the current #mapSvg; replaced whenever the map re-renders
+
+function scaleMarkers(){
+  const svg=$("#mapSvg"); if(!svg) return;
+  const px=svg.getBoundingClientRect().width; if(!px) return;
+  const unitsPerPx=CONFIG.map.width/px;                      // above 1 = the map is drawn smaller than designed
+  const body=Math.min(MARKER_MAX_BODY_SCALE,Math.max(1,unitsPerPx));
+  const hit =Math.min(MARKER_MAX_HIT_SCALE, Math.max(1,unitsPerPx));
+  $$("#mapSvg .mk").forEach(g=>{
+    const x=+g.dataset.x, y=+g.dataset.y;
+    g.querySelector(".mk-body").setAttribute("transform",
+      body===1 ? "" : `translate(${x} ${y}) scale(${body}) translate(${-x} ${-y})`);
+    g.querySelector(".mk-hit").setAttribute("r", MARKER_HIT_R*hit);
+  });
+}
+function watchMarkerScale(){
+  const svg=$("#mapSvg"); if(!svg) return;
+  if(markerObserver) markerObserver.disconnect();
+  scaleMarkers();
+  if(window.ResizeObserver){ markerObserver=new ResizeObserver(scaleMarkers); markerObserver.observe(svg); }
+}
+
 function renderMap(){
   const baseMap=MAPS.California, W=CONFIG.map.width, H=CONFIG.map.height, pad=CONFIG.map.padding;
   const zoomKey = ZOOMS[state.zoom] ? state.zoom : "full";
@@ -1398,11 +1517,13 @@ function renderMap(){
     const [x,y]=project(t.lat,t.lon,view,W,H,pad);
     const st=STATUS[t.s], fx=+x.toFixed(1), fy=+y.toFixed(1);
     const deco = flagsOf(t).map(f=>flagPath(f,fx,fy)).join("");
-    return `<g class="mk" data-i="${DATA.tracks.indexOf(t)}" tabindex="0" role="button"
+    // data-x/data-y let scaleMarkers() grow the dot around its own centre; .mk-body is the
+    // part that scales, .mk-hit is the invisible tap target that scales separately.
+    return `<g class="mk" data-i="${DATA.tracks.indexOf(t)}" data-x="${fx}" data-y="${fy}" tabindex="0" role="button"
               opacity="${confAlpha(t)}"
               aria-label="${esc(t.n)}, ${esc(t.c)}, ${esc(st.label)}">
-       <circle class="mk-hit" cx="${fx}" cy="${fy}" r="15"/>
-       ${deco}${markerPath(st.shape,fx,fy,statusColor(t.s))}
+       <circle class="mk-hit" cx="${fx}" cy="${fy}" r="${MARKER_HIT_R}"/>
+       <g class="mk-body">${deco}${markerPath(st.shape,fx,fy,statusColor(t.s))}</g>
      </g>`;
   }).join("");
 
@@ -1723,6 +1844,38 @@ function renderMethod(){
 /* ==========================================================================
    TAB PLUMBING
    ========================================================================== */
+/* Publishes the sticky header's real height as --top-h so the tab bar can stick flush
+   beneath it (see the .tabs rule). On phones the header isn't sticky, so the offset is 0.
+   Re-run on resize and whenever the header's size changes (fonts loading, text wrapping). */
+function syncHeaderOffset(){
+  const hdr=$(".top"); if(!hdr) return;
+  const sticky=getComputedStyle(hdr).position==="sticky";
+  document.documentElement.style.setProperty("--top-h",(sticky?hdr.offsetHeight:0)+"px");
+}
+
+/* ---- Embedding: deep links into a tab -------------------------------------------------
+   This page runs inside an iframe on postmillenniumrenaissance.com and in Pinkbike posts.
+   A "#map" on the OUTER page's address never reaches an iframe (cross-origin), so there are
+   two ways in: the wrapper page can put the hash on the iframe's src (read at start-up and
+   by the hashchange listener below), or it can postMessage {type:"pmr-hash", hash:"#map"}.
+   Messages are only honoured from PMR_ORIGINS. On Pinkbike (an origin we don't control)
+   neither route fires, and the tool simply opens on its default tab. */
+const PMR_ORIGINS=["https://www.postmillenniumrenaissance.com","https://postmillenniumrenaissance.com"];
+const tabIdFromHash = h => { const id=String(h||"").replace(/^#/,""); return TABS.some(t=>t.id===id) ? id : null; };
+function wireEmbedBridge(){
+  window.addEventListener("hashchange",()=>{
+    const id=tabIdFromHash(location.hash);
+    if(id && id!==state.activeTab) renderTab(id);   // renderTab, not goToTab: the hash is already set
+  });
+  window.addEventListener("message",e=>{
+    if(!PMR_ORIGINS.includes(e.origin)) return;     // ignore anyone we don't recognise
+    const d=e.data;
+    if(!d || d.type!=="pmr-hash" || typeof d.hash!=="string") return;
+    const id=tabIdFromHash(d.hash);
+    if(id) goToTab(id);
+  });
+}
+
 function buildTabs(){
   $("#tabBar").innerHTML = TABS.map((t,i)=>
     `<button class="tab" role="tab" id="tab-${t.id}" data-tab="${t.id}" aria-selected="false" aria-controls="panels">
@@ -1834,6 +1987,7 @@ function wireTable(){
 }
 
 function wireMap(){
+  watchMarkerScale();                                // size markers for this screen now, and again on resize
   $$(".zoom-btn").forEach(b=> b.addEventListener("click",()=>{
     state.zoom = b.dataset.zoom;
     renderTab("map");
@@ -1940,8 +2094,14 @@ function boot(){
   scheduleThemeShimmer();
   buildOrigin();
   buildTabs();
-  const hash=(location.hash||"").replace("#","");
-  renderTab(TABS.some(t=>t.id===hash) ? hash : "overview");
+  // Header height depends on what was just built (swatches, subtitle), so measure now and
+  // keep measuring: ResizeObserver catches font loads and re-wrapping, resize catches the
+  // sticky/static switch at the phone breakpoint.
+  syncHeaderOffset();
+  window.addEventListener("resize",syncHeaderOffset);
+  if(window.ResizeObserver) new ResizeObserver(syncHeaderOffset).observe($(".top"));
+  wireEmbedBridge();
+  renderTab(tabIdFromHash(location.hash) || "overview");
 }
 document.addEventListener("DOMContentLoaded", boot);
 </script>

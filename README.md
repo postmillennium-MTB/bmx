@@ -79,13 +79,13 @@ The current tile repeats **left-to-right only** (`background-repeat: repeat-x`),
 
 ## Extending this file
 
-Everything you'd normally want to change lives in the `CONFIG` and `DATA` blocks near the top of the `<script>` — you shouldn't need to touch rendering code.
+Everything you'd normally want to change lives in the `CONFIG` and `DATA` blocks near the top of the main `<script>` — you shouldn't need to touch rendering code. The one exception is the colour schemes, which sit in a small `<head>` script (see the table below).
 
 | To add | Edit |
 |---|---|
 | A track | Push an object into `DATA.tracks` |
 | A region | Add a key to `DATA.regions`, use it on a track's `r` field |
-| A color scheme | Add an object to `THEMES` (see the existing three for the required variable set) |
+| A color scheme | Add an object to `THEMES` in the `<head>` script (see the existing three for the required variable set). It lives there, not in the main script, so a visitor's saved scheme is applied before the first paint. If you change the *default* scheme, also update `DEFAULT_THEME`, the `:root` palette in the CSS and the `<meta name="theme-color">` tag |
 | A tab | Add an entry to `TABS` with a `render()` function returning an HTML string |
 | A chart | Call `Chart.xy()`, `Chart.bars()`, or `Chart.gantt()` — all hand-rolled SVG, no dependency |
 | A status | Only if it answers "could you ride here?" differently — see [Data model](#data-model-four-statuses-not-eight) |
@@ -93,7 +93,7 @@ Everything you'd normally want to change lives in the `CONFIG` and `DATA` blocks
 | Growth estimates | `DATA.growth` |
 | Sanctioning body timeline | `DATA.leagues` |
 | Google Trends data | `DATA.trends` |
-| A whole additional state | Add an outline to `MAPS`, add tracks with a matching `state` — the projection and marker code are state-agnostic |
+| A whole additional state | **Not yet a one-line edit.** `project()` is state-agnostic, but the Map tab and the Overview mini-map read `MAPS.California` directly and tracks carry no `state` field. Those two renderers need generalising first; then add an outline to `MAPS` |
 
 Every track record looks like this:
 
@@ -123,6 +123,10 @@ This is a first-pass compilation, not a registry. California has had well over 3
 - Theming is CSS custom properties on `:root`; charts read `var(--accent)` etc. at render time, so switching themes re-colors every chart without regenerating data.
 - `localStorage` calls are wrapped in `try/catch` — the tool works in private browsing or with storage disabled, it just won't remember your theme choice.
 - Map projection is a simple equirectangular projection scoped to each state's bounding box in `MAPS` — no tile server, no API key.
+- Map markers are re-sized to the screen: the map is a fixed-width SVG that the browser shrinks on phones, so `scaleMarkers()` grows the dots (and their tap targets) back up on narrow screens. The Bay Area and LA Basin zoom buttons are the answer to the extra overlap in dense areas.
+- Layout: the header is sticky on tablets and desktops and scrolls away on phones; the tab bar sticks beneath it using a measured `--top-h` offset rather than a hard-coded number, so it can't end up hidden if the header changes height.
+- Embedding: a `#tab` in the URL opens that tab, on load and on `hashchange`. The main site's wrapper page can also send `{type:"pmr-hash", hash:"#map"}` by `postMessage`; only `postmillenniumrenaissance.com` origins are honoured. In a page we don't control (a Pinkbike post) neither route fires and the tool opens on its default tab.
+- The `<meta>` and Open Graph tags in `<head>` carry a static copy of the track count, because link previews don't run JavaScript. Update the "128" there when the count changes.
 
 ## License / attribution
 
