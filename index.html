@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BMX Tracks in California — Post Millennium Renaissance</title>
-<meta name="description" content="An interactive atlas of 127 BMX race tracks in California — active, unconfirmed and closed — from the 1969 birthplace of the sport to today.">
+<meta name="description" content="An interactive atlas of 128 BMX race tracks in California — active, unconfirmed and closed — from the 1969 birthplace of the sport to today.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%23141619'/><text y='72' x='50' text-anchor='middle' font-size='58' font-family='Arial Narrow,Arial' font-weight='bold' fill='%23ffd23f'>B</text></svg>">
 
 <!-- ==========================================================================
@@ -447,7 +447,7 @@ const CONFIG = {
     name:"Post Millennium Renaissance",
     homeUrl:"https://postmillenniumrenaissance.com/",
     tool:"BMX Tracks in California",
-    compiled:"August 2026",
+    compiled:"November 2026",
     storageKey:"pmr-bmx-ca-theme"      // localStorage key for theme memory
   },
   /* ------------------------------------------------------------------
@@ -544,7 +544,7 @@ const THEMES = {
 const STATUS = {
   active:      {label:"Active",      color:"var(--ok)",      shape:"dot",    racing:true },
   unconfirmed: {label:"Unconfirmed", color:"var(--warn)",    shape:"hollow", racing:false},
-  building:    {label:"Rebuilding",  color:"var(--accent-3)",shape:"square", racing:false},
+  building:    {label:"In development",color:"var(--accent-3)",shape:"square", racing:false},
   closed:      {label:"Closed",      color:"var(--bad)",     shape:"ring",   racing:false}
 };
 
@@ -562,7 +562,7 @@ const FLAGS = {
 const STATUS_HELP = {
   active:      "Confirmed racing on a schedule published for this season. You could turn up and ride.",
   unconfirmed: "Named in an older directory, but no current schedule found. It may still race, it may be long gone — this atlas does not know.",
-  building:    "A track that exists as a project rather than a venue. Under construction, not yet racing.",
+  building:    "A track that exists as a project rather than a venue. Approved or under construction, but not yet racing.",
   closed:      "No longer operating. Covers everything from a 2024 closure to a 1970s dirt lot that is now a housing tract."
 };
 
@@ -672,8 +672,8 @@ DATA.tracks = [
   {n:"Imperial Valley BMX",c:"El Centro",co:"Imperial",r:"sd",s:"unconfirmed",lat:32.792,lon:-115.563,f:"Unknown",fy:null,w:"",d:"CA21",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
 
   /* ---------- INLAND EMPIRE ---------- */
-  {n:"Grand Prix BMX at SoCal Fair",c:"Perris",co:"Riverside",r:"ie",s:"active",lat:33.787,lon:-117.205,f:"Racing by the late 1990s",fy:null,w:"http://www.grandprixbmx.com",d:"CA24",sanction:"USA BMX",conf:"verified",
-   note:"18700 Lake Perris Dr. Formerly Lake Perris BMX, which hosted a 401-moto ABA national in 1998 — the largest ABA national to that date. Operator changed hands from the Redman family in 2025."},
+  {n:"Grand Prix BMX at SoCal Fair",c:"Perris",co:"Riverside",r:"ie",s:"active",lat:33.787,lon:-117.205,f:"Racing by the late 1990s",fy:null,w:"https://www.usabmx.com/tracks/1946/about",d:"CA24",sanction:"USA BMX",conf:"verified",
+   note:"18700 Lake Perris Dr. Formerly Lake Perris BMX, which hosted a 401-moto ABA national in 1998 — the largest ABA national to that date. Operator changed hands from the Redman family in 2025. USA BMX lists Saturday racing and Monday-night open practice through at least late November 2026."},
   {n:"Orange Show BMX",c:"San Bernardino",co:"San Bernardino",r:"ie",s:"unconfirmed",lat:34.086,lon:-117.288,f:"Unknown",fy:null,w:"",d:"CA16",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"At the National Orange Show grounds."},
   {n:"Cutting Edge BMX",c:"Ontario",co:"San Bernardino",r:"ie",s:"unconfirmed",lat:34.063,lon:-117.651,f:"Unknown",fy:null,w:"",d:"CA13",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"Historically the \u201cCutting Edge Nationals\u201d track."},
   {n:"Coyote BMX",c:"Yucca Valley",co:"San Bernardino",r:"ie",s:"unconfirmed",lat:34.114,lon:-116.432,f:"Unknown",fy:null,w:"",d:"CA23",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
@@ -687,13 +687,16 @@ DATA.tracks = [
   {n:"Palms Park BMX",c:"West Los Angeles (Palms)",co:"Los Angeles",r:"la",s:"closed",birthplace:true,lat:34.024,lon:-118.407,f:"First race July 10, 1969",fy:1969,w:"",d:"",sanction:"Pre-sanctioning / informal",conf:"verified",
    note:"The birthplace of BMX. Ran 1969–1984 under Ron Mackler, then roughly twenty more years under Rich Lee. Nothing remains on site."},
   {n:"Bellflower BMX",c:"Bellflower",co:"Los Angeles",r:"la",s:"active",lat:33.888,lon:-118.135,f:"Unknown",fy:null,w:"https://www.usabmx.com/tracks/ca-bellflower-bmx",d:"CA22",sanction:"USA BMX",conf:"verified",
-   note:"9030 Somerset Blvd. Monday night racing; events listed through late 2025."},
+   note:"9030 Somerset Blvd. Local races on Monday and Friday nights with Wednesday practice; USA BMX lists dates through at least November 20, 2026."},
   {n:"Industry Hills Expo Center",c:"City of Industry",co:"Los Angeles",r:"la",s:"active",national:true,lat:34.019,lon:-117.925,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",
    note:"Hosts the So Cal Nationals, the opening round of the USA BMX national series. A temporary national-event build rather than a weekly local track."},
-  {n:"Antelope Valley BMX",c:"Lancaster",co:"Los Angeles",r:"la",s:"unconfirmed",lat:34.687,lon:-118.154,f:"Unknown",fy:null,w:"",d:"CA17",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
+  {n:"Lancaster BMX",c:"Lancaster",co:"Los Angeles",r:"la",s:"active",lat:34.719,lon:-118.176,f:"Unknown",fy:null,w:"https://www.usabmx.com/tracks/ca-lancaster-bmx/about",d:"CA17",sanction:"USA BMX",conf:"verified",
+   note:"2551 W Avenue H. Saturday morning racing and practice, with dates listed into December 2026 on USA BMX. Appears as Antelope Valley BMX in the 2010–11 directory (district CA17); assumed to be the same track."},
   {n:"Sycamore BMX",c:"Simi Valley",co:"Ventura",r:"la",s:"unconfirmed",lat:34.266,lon:-118.720,f:"Unknown",fy:null,w:"",d:"CA07",sanction:"ABA (2010–11 listing)",conf:"estimated",note:""},
   {n:"Orange Y BMX",c:"Orange",co:"Orange",r:"la",s:"closed",lat:33.797,lon:-117.848,f:"Founded 1976",fy:1976,w:"",d:"CA14",sanction:"ABA / USA BMX",conf:"verified",
-   note:"\u201cThe World Famous Y.\u201d Hosted the California state finals thirty years running and was among the highest rider-count tracks in the country. Closed August 28, 2016 over a YMCA lease dispute; the land was sold in 2019. Orange County has had no sanctioned track since."},
+   note:"\u201cThe World Famous Y.\u201d Hosted the California state finals thirty years running and was among the highest rider-count tracks in the country. Closed August 28, 2016 over a YMCA lease dispute; the land was sold in 2019. Orange County has had no sanctioned track since; a new USA BMX track, Saddleback BMX, was approved at Irvine Lake in June 2026 but is not yet built."},
+  {n:"Saddleback BMX",c:"Silverado (Irvine Lake)",co:"Orange",r:"la",s:"building",lat:33.778,lon:-117.718,f:"Approved June 2026",fy:null,w:"https://socalbmx.org",d:"",sanction:"USA BMX (planned)",conf:"verified",
+   note:"At the Irvine Lake Recreational Area, in the shadow of the former Saddleback Motocross Park, where some of the earliest BMX races were held. Approved unanimously by the Orange County Board of Supervisors on June 23, 2026. SoCal BMX, a 501(c)(3) nonprofit, is leading development with a $250,000 fundraising goal; not yet built or racing. USA BMX describes it as bringing a sanctioned track back to Orange County. The map pin is the lake's centre, not the track site."},
   {n:"B.U.M.S. track",c:"Long Beach (7th & Lew)",co:"Los Angeles",r:"la",s:"closed",lat:33.786,lon:-118.152,f:"c. 1970",fy:1970,w:"",d:"",sanction:"B.U.M.S.",conf:"draft",
    note:"A dirt lot on the corner of 7th and Lew that became the Bicycle United Motocross Society — the first BMX sanctioning body of any kind, California-only. Scot Breithaupt, then 13, offered 35 kids a race if they each chipped in a quarter. 150 turned up the following week."},
   {n:"Escape Country",c:"Trabuco Canyon",co:"Orange",r:"la",s:"closed",lat:33.660,lon:-117.590,f:"Early 1970s",fy:1972,w:"",d:"",sanction:"Independent",conf:"draft",
@@ -732,7 +735,7 @@ DATA.tracks = [
   {n:"Frogtown BMX",c:"Angels Camp",co:"Calaveras",r:"sac",s:"active",lat:38.070,lon:-120.545,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",
    note:"245 Gunclub Rd, at the Calaveras County Fairgrounds. Not present in the 2010–11 directory, so likely a newer or revived track."},
   {n:"Silver Dollar BMX (new site)",c:"Chico",co:"Butte",r:"sac",s:"building",lat:39.795,lon:-121.855,f:"Under construction since 2023",fy:null,w:"https://silverdollarbmx.com/",d:"CA12",sanction:"USA BMX",conf:"verified",
-   note:"Replacement track near Chico Municipal Airport. Volunteers were still building as of late 2025; racing had not resumed."},
+   note:"Replacement track near Chico Municipal Airport. Volunteers were still building as of late 2025. A November 2026 search found no opening announcement or race schedule, so racing is presumed not to have resumed — unconfirmed."},
   {n:"Silver Dollar BMX (original)",c:"Chico",co:"Butte",r:"sac",s:"closed",lat:39.720,lon:-121.827,f:"Nonprofit founded 2000",fy:2000,w:"https://silverdollarbmx.com/",d:"CA12",sanction:"USA BMX",conf:"verified",
    note:"Held a 30-year no-cost city lease beside the Silver Dollar Fairgrounds. The city reclaimed the site in 2021 for emergency housing following Warren v. City of Chico; the track closed that November."},
   {n:"Oak Creek BMX",c:"Roseville",co:"Placer",r:"sac",s:"active",national:true,lat:38.747,lon:-121.293,f:"Unknown",fy:null,w:"https://www.oakcreekbmx.org/",d:"CA11",sanction:"USA BMX",conf:"verified",
@@ -749,11 +752,12 @@ DATA.tracks = [
   {n:"North Bay BMX",c:"Napa",co:"Napa",r:"bay",s:"active",lat:38.297,lon:-122.286,f:"Unknown",fy:null,w:"",d:"CA04",sanction:"USA BMX",conf:"verified",note:"Two weekends on the 2026 NorCal 4-Star Series schedule."},
   {n:"Morgan Hill BMX",c:"Morgan Hill",co:"Santa Clara",r:"bay",s:"active",lat:37.130,lon:-121.654,f:"Unknown",fy:null,w:"",d:"",sanction:"USA BMX",conf:"verified",
    note:"On the 2026 NorCal 4-Star Series schedule with a date still to be announced. Absent from the 2010–11 directory."},
-  {n:"Livermore BMX",c:"Livermore",co:"Alameda",r:"bay",s:"unconfirmed",lat:37.669,lon:-121.744,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",
-   note:"4444 East Ave, run through the Livermore Area Recreation and Park District. Appears in two independent directories."},
+  {n:"Livermore BMX",c:"Livermore",co:"Alameda",r:"bay",s:"unconfirmed",lat:37.694,lon:-121.718,f:"Unknown",fy:null,w:"https://www.larpd.org/bmx-park-at-bill-payne",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",
+   note:"Run through the Livermore Area Recreation and Park District. The district's own page places its BMX course at William J. (Bill) Payne Sports Park, Patterson Pass Rd at S. Vasco Rd, open sunrise to sunset, with no sanction, schedule or racing program mentioned — it may be a public course rather than a race track, and whether it is the track listed in 2010–11 is not established. Appears in two independent directories."},
   {n:"San Ramon BMX",c:"San Ramon",co:"Contra Costa",r:"bay",s:"unconfirmed",lat:37.766,lon:-121.978,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"estimated",
    note:"Bollinger Canyon Rd at San Ramon Valley Blvd. Appears in two independent directories."},
-  {n:"Santa Clara PAL BMX",c:"Santa Clara",co:"Santa Clara",r:"bay",s:"unconfirmed",lat:37.354,lon:-121.955,f:"Unknown",fy:null,w:"",d:"CA08",sanction:"ABA (2010–11 listing)",conf:"estimated",note:"Run through the police department's PAL program."},
+  {n:"Santa Clara PAL BMX",c:"Santa Clara",co:"Santa Clara",r:"bay",s:"unconfirmed",lat:37.354,lon:-121.955,f:"Unknown",fy:null,w:"",d:"CA08",sanction:"USA BMX until 2022 (sanction revoked)",conf:"estimated",
+   note:"Run through the Santa Clara Police Activities League (PAL). Ranked No. 1 in the country by USA BMX two years running as of 2019. USA BMX revoked the sanction in 2022 after PAL replaced the volunteer operators, and the track reopened for practice only. A follow-up in the Silicon Valley Voice (page dated March 2025) described its fate as still unknown; no evidence of a restored sanction was found. Whether it still operates is unresolved."},
   {n:"CAA International Trails",c:"San Lorenzo",co:"Alameda",r:"bay",s:"unconfirmed",lat:37.681,lon:-122.124,f:"Unknown",fy:null,w:"",d:"",sanction:"NBL (2010–11 listing)",conf:"draft",note:"Listed in 2010–11; likely defunct."},
   {n:"Oakland Coliseum BMX",c:"Oakland",co:"Alameda",r:"bay",s:"closed",lat:37.751,lon:-122.200,f:"1974",fy:1974,w:"",d:"",sanction:"NBA",conf:"draft",note:"A parking-lot track, among the earliest NorCal race sites. Rider recollection only."},
 
@@ -798,7 +802,7 @@ DATA.tracks = [
    note:"Remembered for a feature riders called Breithaupt Mountain. Whether this is a separate site from the B.U.M.S. lot is not established."},
   {n:"Harbor City BMX",c:"Harbor City",co:"Los Angeles",r:"la",s:"closed",lat:33.799,lon:-118.297,f:"1970s–80s",fy:1978,w:"",d:"",sanction:"ABA",conf:"draft",note:"Remembered as sitting beneath a large bridge."},
   {n:"Saddleback Park",c:"Orange (Irvine Lake area)",co:"Orange",r:"la",s:"closed",lat:33.770,lon:-117.680,f:"Early 1970s",fy:1972,w:"",d:"",sanction:"Independent",conf:"draft",
-   note:"A downhill course at the motocross park, named among the earliest tracks operating alongside Escape Country and Dominguez."},
+   note:"A downhill course at the motocross park, named among the earliest tracks operating alongside Escape Country and Dominguez. See also Saddleback BMX, approved in 2026 in the shadow of the Saddleback Motocross Park."},
   {n:"Western Sportsorama",c:"Orange",co:"Orange",r:"la",s:"closed",lat:33.788,lon:-117.853,f:"1970s",fy:1975,w:"",d:"",sanction:"Unknown",conf:"draft",note:""},
   {n:"Santa Ana Elks",c:"Santa Ana",co:"Orange",r:"la",s:"closed",lat:33.740,lon:-117.868,f:"1970s",fy:1975,w:"",d:"",sanction:"Unknown",conf:"draft",note:"On Lyon Street near the Santa Ana zoo."},
   {n:"Fountain Valley Elks",c:"Fountain Valley",co:"Orange",r:"la",s:"closed",lat:33.709,lon:-117.953,f:"Early 1970s",fy:1973,w:"",d:"",sanction:"Unknown",conf:"draft",note:"Named among the tracks already running when the NBA formed."},
@@ -897,7 +901,7 @@ DATA.growth = [
   {year:2010, low:44, mid:48, high:54, conf:"verified",  basis:"ANCHOR POINT: 48 distinct California tracks counted directly in the archived ABA + NBL statewide directory."},
   {year:2015, low:30, mid:38, high:46, conf:"estimated", basis:"Consolidation after the 2011 ABA–NBL merger into USA BMX."},
   {year:2020, low:20, mid:27, high:34, conf:"estimated", basis:"Continued attrition; pandemic closures compound rising land and insurance costs."},
-  {year:2025, low:15, mid:21, high:28, conf:"estimated", basis:"16 tracks confirmed racing on current published schedules, plus an unknown share of the 30-odd tracks carried from the older directory that were not individually reconfirmed."}
+  {year:2025, low:15, mid:21, high:28, conf:"estimated", basis:"17 tracks confirmed racing on current published schedules, plus an unknown share of the 30-odd tracks carried from the older directory that were not individually reconfirmed."}
 ];
 
 /* --------------------------------------------------------------------------
@@ -947,7 +951,7 @@ DATA.trends = {
    SOURCES
    -------------------------------------------------------------------------- */
 DATA.sources = [
-  ["USA BMX — track and event pages","Current venue confirmations and 2025–2026 race schedules. The live event feed is what confirmed Hesperia and Oak Creek as still racing."],
+  ["USA BMX — track and event pages","Current venue confirmations and 2025–2026 race schedules. The live event feed is what confirmed Hesperia and Oak Creek as still racing; the November 2026 pass added Bellflower, Grand Prix BMX and Lancaster, and the Saddleback BMX announcement (August 14, 2026)."],
   ["Golden State BMX / NorCal 4-Star Series (calbmx.com)","The active NorCal track roster and the 2026 series schedule."],
   ["Archived California track directory (BMXtra), content dated circa 2010–11","A combined ABA + NBL statewide list, including the CA district codes shown in this atlas. The seed for every \u201cEstimated\u201d record and the anchor for the 2010 growth estimate."],
   ["San Diego Reader — \u201cWhat does end of Chula Vista BMX mean?\u201d (September 2024)","The Chula Vista closure, and confirmation that San Diego BMX and Cactus Park BMX are the county's two survivors."],
@@ -962,6 +966,9 @@ DATA.sources = [
   ["University of BMX and Legend Bike Co. histories","Early 1970s track names, the B.U.M.S. lot at 7th and Lew in Long Beach, and the On Any Sunday chain of influence."],
   ["BMXmuseum.com forums — SoCal and NorCal track history threads","Rider recollection, and the single largest source of historic track names here. Every \u201cDraft\u201d record leans on it. Not independently verified, and riders correct each other within the threads."],
   ["Bermstyle — NorCal bike park and BMX track listings","Cross-confirmation for Livermore and San Ramon."],
+  ["Livermore Area Recreation and Park District — BMX Park at Bill Payne","The district's own description and location of its BMX course, which corrected the earlier Livermore address."],
+  ["Silicon Valley Voice — Santa Clara BMX coverage (2022; follow-up page dated March 2025)","Santa Clara PAL BMX: the 2022 loss of its USA BMX sanction and the practice-only reopening."],
+  ["OpenStreetMap contributors (Nominatim geocoder)","Map coordinates for the Lancaster address, the Livermore course intersection and Irvine Lake, added in the November 2026 pass. © OpenStreetMap contributors, ODbL."],
   ["Google Trends — US search interest for \u201cBMX\u201d, 2004–present","Digitized from a screenshot supplied by the user; annual averages are approximate."]
 ];
 
@@ -1227,12 +1234,12 @@ DATA.silverDollar = {
     ["Original site lost","2021"],
     ["Reason","City reclaimed the land for homeless housing"],
     ["New site","Under construction since 2023, near Chico Municipal Airport"],
-    ["Racing resumed","Not yet, as of late 2025"]
+    ["Racing resumed","No opening announced (Nov 2026 search)"]
   ],
   paragraphs:[
     "Silver Dollar BMX ran for two decades on a 30-year, no-cost lease beside the Silver Dollar Fairgrounds in Chico, incorporated as a nonprofit in <strong>2000</strong>.",
     "In <strong>2021</strong>, the City of Chico reclaimed the site for emergency homeless housing, following the outcome of <em>Warren v. City of Chico</em>. The track closed that November, with no fallback site lined up.",
-    "Volunteers have since been rebuilding at a new location near the Chico Municipal Airport, under construction since 2023. As of late 2025, the new track was <strong>still not racing</strong> — a well-known California BMX track effectively erased from the calendar for years by a single land-use decision, not by a lack of riders."
+    "Volunteers have since been rebuilding at a new location near the Chico Municipal Airport, under construction since 2023. As of late 2025, the new track was <strong>still not racing</strong>, and a November 2026 search found no opening announcement — a well-known California BMX track effectively erased from the calendar for years by a single land-use decision, not by a lack of riders."
   ]
 };
 
@@ -1258,7 +1265,7 @@ function renderOverview(){
     const inR = all.filter(t=>t.r===k);
     return {label:regionLabel(k), segments:[
       {label:"Active", v:inR.filter(isRacing).length, color:"var(--ok)", opacity:.85},
-      {label:"Unconfirmed or rebuilding", v:inR.filter(t=>t.s==="unconfirmed"||t.s==="building").length, color:"var(--warn)", opacity:.75},
+      {label:"Unconfirmed or in development", v:inR.filter(t=>t.s==="unconfirmed"||t.s==="building").length, color:"var(--warn)", opacity:.75},
       {label:"Closed", v:inR.filter(isClosed).length, color:"var(--bad)", opacity:.6}
     ]};
   }).sort((a,b)=> b.segments.reduce((s,x)=>s+x.v,0)-a.segments.reduce((s,x)=>s+x.v,0));
@@ -1316,7 +1323,7 @@ function renderOverview(){
       ${Chart.bars({rows,labelW:200,aria:"Tracks by California region"})}
       <div class="legend-inline">
         <span><i class="dot" style="background:var(--ok)"></i>Active</span>
-        <span><i class="dot" style="background:var(--warn)"></i>Unconfirmed or rebuilding</span>
+        <span><i class="dot" style="background:var(--warn)"></i>Unconfirmed or in development</span>
         <span><i class="dot" style="background:var(--bad)"></i>Closed</span>
       </div>
     </div>
