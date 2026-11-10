@@ -79,13 +79,13 @@ The current tile repeats **left-to-right only** (`background-repeat: repeat-x`),
 
 ## Extending this file
 
-Everything you'd normally want to change lives in the `CONFIG` and `DATA` blocks near the top of the main `<script>` — you shouldn't need to touch rendering code. The one exception is the colour schemes, which sit in a small `<head>` script (see the table below).
+Everything you'd normally want to change lives in the `CONFIG` and `DATA` blocks near the top of the main `<script>` — you shouldn't need to touch rendering code. The one exception is the colour schemes, whose colours are CSS blocks (see the table below).
 
 | To add | Edit |
 |---|---|
 | A track | Push an object into `DATA.tracks` |
 | A region | Add a key to `DATA.regions`, use it on a track's `r` field |
-| A color scheme | Add an object to `THEMES` in the `<head>` script (see the existing three for the required variable set). It lives there, not in the main script, so a visitor's saved scheme is applied before the first paint. If you change the *default* scheme, also update `DEFAULT_THEME`, the `:root` palette in the CSS and the `<meta name="theme-color">` tag |
+| A color scheme | **Two places.** (1) Copy a `[data-theme="id"]` block in the CSS ("1. THEME TOKENS") and give it every variable; (2) add an entry to `THEMES` in the script (name and swatch colour). The colours have to be in the CSS so a visitor's saved scheme can paint on the very first frame. The default scheme is the bare `:root` block and must stay *first* in the CSS (see the comment there). If you change the default, also update `DEFAULT_THEME` and the `<meta name="theme-color">` tag |
 | A tab | Add an entry to `TABS` with a `render()` function returning an HTML string |
 | A chart | Call `Chart.xy()`, `Chart.bars()`, or `Chart.gantt()` — all hand-rolled SVG, no dependency |
 | A status | Only if it answers "could you ride here?" differently — see [Data model](#data-model-four-statuses-not-eight) |
@@ -120,7 +120,8 @@ This is a first-pass compilation, not a registry. California has had well over 3
 ## Tech notes
 
 - Zero dependencies: no CDN scripts, no build tooling. `Chart.xy/bars/gantt` are ~150 lines of hand-rolled SVG generation.
-- Theming is CSS custom properties on `:root`; charts read `var(--accent)` etc. at render time, so switching themes re-colors every chart without regenerating data.
+- Theming is CSS custom properties: one block per scheme, picked by `data-theme` on `<html>`. A one-line script in `<head>` sets that attribute from the saved choice before the page paints, so there is no flash of the wrong colours on a slow connection. Charts read `var(--accent)` etc. at render time, so switching themes re-colors every chart without regenerating data.
+- On phones the Directory table scrolls sideways with its Track column pinned, so a row never loses its name.
 - `localStorage` calls are wrapped in `try/catch` — the tool works in private browsing or with storage disabled, it just won't remember your theme choice.
 - Map projection is a simple equirectangular projection scoped to each state's bounding box in `MAPS` — no tile server, no API key.
 - Map markers are re-sized to the screen: the map is a fixed-width SVG that the browser shrinks on phones, so `scaleMarkers()` grows the dots (and their tap targets) back up on narrow screens. The Bay Area and LA Basin zoom buttons are the answer to the extra overlap in dense areas.
