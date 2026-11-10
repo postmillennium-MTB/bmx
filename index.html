@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BMX Tracks in California — Post Millennium Renaissance</title>
 <meta name="description" content="An interactive atlas of 128 BMX race tracks in California — active, unconfirmed and closed — from the 1969 birthplace of the sport to today.">
-<meta name="theme-color" content="#222427"><!-- applyThemeVars() keeps this in step with the chosen scheme -->
+<meta name="theme-color" content="#222427"><!-- no-JS fallback; syncThemeColor() keeps it in step with the chosen scheme -->
 
 <!-- Icons are the PMR antler mark, relative paths because this page is served from a
      subpath on github.io (on the main site wrapper the same links need a leading slash). -->
@@ -41,7 +41,7 @@
        ADD A TRACK ............ push an object into DATA.tracks
        ADD A STATE ............ NOT YET SUPPORTED — see the note above MAPS
        ADD A COUNTY/REGION .... add a key to DATA.regions, use it on a track
-       ADD A COLOR SCHEME ..... add an object to THEMES (it lives in the <head> script)
+       ADD A COLOR SCHEME ..... a [data-theme] block in the CSS + an entry in THEMES
        ADD A TAB .............. add an entry to TABS with a render function
        ADD A CHART ............ call Chart.xy / Chart.bars / Chart.gantt
        EDIT GROWTH ESTIMATES .. DATA.growth
@@ -54,18 +54,26 @@
 
 <style>
 /* ==========================================================================
-   1. THEME TOKENS
-   Each theme in the THEMES object writes these custom properties onto <html>.
-   To add a scheme, add an object to THEMES — no CSS changes required.
+   1. THEME TOKENS — the colours of every scheme live here, written once.
+   One block per scheme, picked by data-theme="id" on <html> (ids match the THEMES list in
+   the script). The DEFAULT scheme (Powerlite) is the bare :root block and MUST stay FIRST:
+   :root and [data-theme="x"] have identical specificity, so whichever is declared LAST
+   wins — put the default after the others and it would silently override all of them.
+   The shared non-colour tokens (shadow, radius, fonts) live in :root only.
+
+   TO ADD A SCHEME (two places, because custom properties can't be written from JS without
+   bringing back the unthemed first paint):
+     1. copy a [data-theme] block below, rename it, and give it EVERY variable;
+     2. add a matching entry to THEMES in the script (label + swatch colour).
+   If you change which scheme is the default, move its values into :root, set
+   DEFAULT_THEME, and update the <meta name="theme-color"> tag.
    ========================================================================== */
 :root{
-  /* Colour tokens below mirror THEMES.powerlite (the default). The head script overwrites
-     them before first paint, so they only show if JavaScript is unavailable. They had
-     drifted from the real palette (darker background) — keep the two in step. */
+  /* ---- Powerlite (default): charcoal and yellow ---- */
   --bg:#222427; --bg-alt:#282b30; --surface:#2e3239; --surface-2:#353a42;
   --line:#414852; --line-soft:#383d45;
   --text:#f2f1ec; --text-dim:#9aa3af; --text-faint:#6b7280;
-  --accent:#ffd23f; --accent-2:#e5484d; --accent-3:#4cc2ff;
+  --accent:#ffd23f; --accent-2:#e5484d; --accent-3:#4cc2ff; --hero-accent:#ffd23f;
   --ok:#5ec26a; --warn:#f0a33a; --bad:#e5484d; --ghost:#7c8794;
   --plate-bg:#f2f1ec; --plate-ink:#141619;
   --grid:rgba(255,255,255,.07);
@@ -76,6 +84,33 @@
   --font-display:"Arial Narrow","Helvetica Neue Condensed","Roboto Condensed","Liberation Sans Narrow",Impact,system-ui,sans-serif;
   --font-body:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --font-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+
+/* ---- Robinson: navy and sky blue ---- */
+[data-theme="robinson"]{
+  --bg:#0b1a2a; --bg-alt:#0f2237; --surface:#12283f; --surface-2:#17324c;
+  --line:#25496b; --line-soft:#1c3a58;
+  --text:#e4eef8; --text-dim:#93b4d0; --text-faint:#6b8fae;
+  --accent:#7dd3fc; --accent-2:#fbbf24; --accent-3:#a5f3d0; --hero-accent:#7dd3fc;
+  --ok:#5eead4; --warn:#fbbf24; --bad:#fb7185; --ghost:#6b8fae;
+  --plate-bg:#e4eef8; --plate-ink:#0b1a2a;
+  --grid:rgba(125,211,252,.13);
+  --land:#143050; --land-line:#3f7fb5;
+}
+
+/* ---- Auburn: the light scheme — cream paper and rust ----
+   --hero-accent is brighter than --accent here: the hero artwork is dark in every scheme, so
+   a light scheme needs a brighter accent over it or the title will not read. Set it on any
+   scheme you add. */
+[data-theme="auburn"]{
+  --bg:#e8ddc8; --bg-alt:#ddd0b6; --surface:#f3ebda; --surface-2:#e6dbc3;
+  --line:#c3b193; --line-soft:#d5c8ad;
+  --text:#26201a; --text-dim:#6b5c4a; --text-faint:#8a7a64;
+  --accent:#9c3b1b; --accent-2:#4a6b2f; --accent-3:#2f5f7d; --hero-accent:#e8834a;
+  --ok:#4a6b2f; --warn:#b07d1a; --bad:#9c3b1b; --ghost:#8a7a64;
+  --plate-bg:#26201a; --plate-ink:#f3ebda;
+  --grid:rgba(38,32,26,.10);
+  --land:#dbcdb0; --land-line:#8a7a64;
 }
 
 /* ==========================================================================
@@ -364,6 +399,7 @@ select{width:auto;min-width:150px;cursor:pointer}
 }
 .btn-clear:hover{color:var(--text);border-color:var(--accent)}
 .result-count{font-family:var(--font-mono);font-size:12px;color:var(--text-faint);margin:0 0 10px}
+.tbl-hint{display:none;font-size:12px;color:var(--text-faint);margin:0 0 8px}   /* phones only — see the phone media block */
 
 .tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
 table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:820px}
@@ -414,6 +450,17 @@ tbody tr:last-child td{border-bottom:0}
      (and sticking only the tab bar) hands that space back. Cost: the PMR home link and the
      colour swatches are no longer on screen while you scroll; they are one scroll-up away. */
   .top{position:static}
+  /* Directory table: wider than a phone, so it scrolls sideways — and it used to scroll the
+     Track column away with everything else, leaving rows you couldn't identify ("1970s–80s,
+     ABA, Draft" — which track?). Pin that column and say the table scrolls. The pinned cells
+     need SOLID backgrounds or the columns sliding underneath show through them. */
+  .tbl-hint{display:block}
+  .dir-table th:first-child,.dir-table td:first-child{
+    position:sticky;left:0;z-index:2;background:var(--surface);
+    box-shadow:1px 0 0 var(--line),6px 0 8px -6px rgba(0,0,0,.3);   /* hairline + soft edge so it reads as "floating" */
+  }
+  .dir-table thead th:first-child{z-index:3;background:var(--surface-2)}
+  .dir-table tbody tr:hover td:first-child{background:var(--surface-2)}
 }
 /* Touch targets: PMR standard is 40px minimum. Applies to phones and to any touch screen
    (tablets), not just narrow windows. */
@@ -426,83 +473,30 @@ tbody tr:last-child td{border-bottom:0}
 
 <script>
 /* ==========================================================================
-   THEME PALETTES live here, in <head>, on purpose.
-   The main script sits at the end of a ~130 KB file. On a slow connection the
-   page shell used to paint in the base palette while that script downloaded,
-   then flip to the visitor's saved scheme — a dark-to-light flash for anyone
-   who had picked Auburn. Applying the saved scheme from <head> means the first
-   paint is already in the right colours. The main script reuses THEMES,
-   DEFAULT_THEME, THEME_STORAGE_KEY and applyThemeVars() from here.
+   FIRST-PAINT THEME. Applies the visitor's saved colour scheme before the page body is
+   painted. The palettes themselves are the [data-theme] blocks in the CSS above; this only
+   sets the attribute that picks one. It has to run here, in <head>: the main script sits at
+   the end of a ~130 KB file, and on a slow connection the page shell used to paint in the
+   default colours while it downloaded, then flip to the saved scheme (a dark-to-light flash
+   for anyone who had chosen Auburn). The main script reuses THEME_STORAGE_KEY and
+   syncThemeColor() from here.
    ========================================================================== */
-/* ==========================================================================
-   THEMES — add an object here to add a color scheme. Nothing else to change.
-   `vars` maps 1:1 onto the CSS custom properties in :root.
-   Named for three California-era BMX frame brands. Chuck Robinson, who built
-   Robinson Racing frames, appears in this atlas's own origin story — he was
-   one of the three men watching the opening of "On Any Sunday" in 1971.
-   The palettes are evocative of each brand's era, not exact brand colors.
-   NOTE: --hero-accent is the accent used over the dark hero artwork. It is
-   usually the same as --accent, but a light theme needs a brighter value
-   there or the title will not read. Set it on any theme you add.
-   ========================================================================== */
-const THEMES = {
-  powerlite:{
-    label:"Powerlite", swatch:"#ffd23f",
-    vars:{
-      "--bg":"#222427","--bg-alt":"#282b30","--surface":"#2e3239","--surface-2":"#353a42",
-      "--line":"#414852","--line-soft":"#383d45",
-      "--text":"#f2f1ec","--text-dim":"#9aa3af","--text-faint":"#6b7280",
-      "--accent":"#ffd23f","--accent-2":"#e5484d","--accent-3":"#4cc2ff","--hero-accent":"#ffd23f",
-      "--ok":"#5ec26a","--warn":"#f0a33a","--bad":"#e5484d","--ghost":"#7c8794",
-      "--plate-bg":"#f2f1ec","--plate-ink":"#141619",
-      "--grid":"rgba(255,255,255,.07)","--land":"#32373f","--land-line":"#58616f"
-    }
-  },
-  robinson:{
-    label:"Robinson", swatch:"#7dd3fc",
-    vars:{
-      "--bg":"#0b1a2a","--bg-alt":"#0f2237","--surface":"#12283f","--surface-2":"#17324c",
-      "--line":"#25496b","--line-soft":"#1c3a58",
-      "--text":"#e4eef8","--text-dim":"#93b4d0","--text-faint":"#6b8fae",
-      "--accent":"#7dd3fc","--accent-2":"#fbbf24","--accent-3":"#a5f3d0","--hero-accent":"#7dd3fc",
-      "--ok":"#5eead4","--warn":"#fbbf24","--bad":"#fb7185","--ghost":"#6b8fae",
-      "--plate-bg":"#e4eef8","--plate-ink":"#0b1a2a",
-      "--grid":"rgba(125,211,252,.13)","--land":"#143050","--land-line":"#3f7fb5"
-    }
-  },
-  auburn:{
-    label:"Auburn", swatch:"#9c3b1b",
-    vars:{
-      "--bg":"#e8ddc8","--bg-alt":"#ddd0b6","--surface":"#f3ebda","--surface-2":"#e6dbc3",
-      "--line":"#c3b193","--line-soft":"#d5c8ad",
-      "--text":"#26201a","--text-dim":"#6b5c4a","--text-faint":"#8a7a64",
-      "--accent":"#9c3b1b","--accent-2":"#4a6b2f","--accent-3":"#2f5f7d","--hero-accent":"#e8834a",
-      "--ok":"#4a6b2f","--warn":"#b07d1a","--bad":"#9c3b1b","--ghost":"#8a7a64",
-      "--plate-bg":"#26201a","--plate-ink":"#f3ebda",
-      "--grid":"rgba(38,32,26,.10)","--land":"#dbcdb0","--land-line":"#8a7a64"
-    }
-  }
-};
-
-/* Scheme used when nothing is saved (or the saved key no longer exists). If you change
-   it, also update the :root palette in the CSS (a mirror of this scheme for no-JS
-   fallback) and the <meta name="theme-color"> tag. */
-const DEFAULT_THEME = "powerlite";
 const THEME_STORAGE_KEY = "pmr-bmx-ca-theme";   // localStorage key for theme memory
 
-/* Writes a scheme's variables onto <html> and keeps the mobile browser-chrome colour in
-   step. Called here for first paint, and again by applyTheme() when a swatch is clicked. */
-function applyThemeVars(key){
-  const t = THEMES[key]; if(!t) return;
-  const root = document.documentElement;
-  Object.entries(t.vars).forEach(([k,v])=> root.style.setProperty(k,v));
+/* Keeps the mobile browser-chrome colour (<meta name="theme-color">) in step with the active
+   scheme. It reads the scheme's own --bg, so that colour is only ever written down once, in
+   the CSS. The static value in the <meta> tag is just the no-JavaScript fallback. */
+function syncThemeColor(){
   const meta = document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute("content", t.vars["--bg"]);
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  if(meta && bg) meta.setAttribute("content", bg);
 }
 (function(){
-  let saved = null;
-  try{ saved = localStorage.getItem(THEME_STORAGE_KEY); }catch(e){/* storage blocked — default scheme */}
-  applyThemeVars(THEMES[saved] ? saved : DEFAULT_THEME);
+  try{
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if(saved) document.documentElement.setAttribute("data-theme", saved);   // an unknown id matches no CSS block, so the default shows
+  }catch(e){/* storage blocked — default scheme */}
+  syncThemeColor();
 })();
 </script>
 </head>
@@ -598,6 +592,23 @@ const CONFIG = {
   },
   map:{ padding:26, width:720, height:840 }
 };
+
+/* ==========================================================================
+   THEMES — the list of colour schemes: a name and the swatch colour for the picker button.
+   The colours themselves are NOT here: each scheme is a [data-theme="id"] block in the CSS
+   (the default, Powerlite, is the bare :root block). Keys must match those CSS ids.
+   TO ADD A THEME: add an entry here AND a matching CSS block (see "1. THEME TOKENS").
+   Named for three California-era BMX frame brands. Chuck Robinson, who built Robinson
+   Racing frames, appears in this atlas's own origin story — he was one of the three men
+   watching the opening of "On Any Sunday" in 1971. The palettes are evocative of each
+   brand's era, not exact brand colors.
+   ========================================================================== */
+const THEMES = {
+  powerlite:{ label:"Powerlite", swatch:"#ffd23f" },
+  robinson: { label:"Robinson",  swatch:"#7dd3fc" },
+  auburn:   { label:"Auburn",    swatch:"#9c3b1b" }
+};
+const DEFAULT_THEME = "powerlite";   // must be the scheme the bare :root CSS block holds
 
 /* ==========================================================================
    STATUS MODEL
@@ -1215,12 +1226,13 @@ function flagPath(flag,x,y){
 /* ==========================================================================
    THEME
    ========================================================================== */
-/* THEMES, DEFAULT_THEME, THEME_STORAGE_KEY and applyThemeVars() are defined in the <head>
-   script (so the saved scheme paints on first frame). This function does the rest of a
-   scheme change: button state, the name label, saving the choice, re-drawing charts. */
+/* Switches scheme: points <html data-theme> at the chosen CSS block (the colours live in the
+   CSS), then updates button state, the name label, the saved choice and the charts.
+   THEME_STORAGE_KEY and syncThemeColor() come from the <head> script. */
 function applyTheme(key){
   const t = THEMES[key]; if(!t) return;
-  applyThemeVars(key);
+  document.documentElement.setAttribute("data-theme", key);
+  syncThemeColor();
   $$(".theme-btn").forEach(b=> b.setAttribute("aria-pressed", String(b.dataset.theme===key)));
   const nameEl = $("#themeName");
   if(nameEl) nameEl.textContent = t.label;
@@ -1641,8 +1653,9 @@ function renderDirectory(){
     are the ABA district numbers each California track raced under.</p>
   ${controlsHTML()}
   <p class="result-count" id="dirCount"></p>
+  <p class="tbl-hint">Swipe the table sideways for status, founded year, sanction and notes →</p>
   <div class="tbl-scroll">
-    <table><thead><tr>${head}</tr></thead><tbody id="dirBody">${tableRows(filteredTracks())}</tbody></table>
+    <table class="dir-table"><thead><tr>${head}</tr></thead><tbody id="dirBody">${tableRows(filteredTracks())}</tbody></table>
   </div>`;
 }
 
